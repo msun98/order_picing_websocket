@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/img">
+        <file>yujin.png</file>
+        <file>rainbow.png</file>
+    </qresource>
+</RCC>
