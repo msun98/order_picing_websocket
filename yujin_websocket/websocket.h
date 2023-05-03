@@ -2,6 +2,7 @@
 #define WEBSOCKET_H
 #include <QWebSocketServer>
 #include <QWebSocket>
+#include <QIODevice>
 
 #include <QJsonObject>
 #include <QJsonDocument>
@@ -9,6 +10,12 @@
 #include <QTimer>
 #include <QtCore/QDebug>
 #include <QDir>
+#include <QSettings>
+#include <cmath>
+
+// opencv
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/types_c.h>
 
 class websocket : public QObject
 {
@@ -20,6 +27,18 @@ public:
     bool msg = false;
 
     QString uuid;
+
+    cv::Mat img, src;//디버깅용 이미지 show하기 위함.
+
+    QByteArray fileData_byte;//유진로봇에서 요청한 내용 보내기 위함.
+
+    QString map_id;
+
+    QFile* file;//file read할 때 사용하기 위함.
+
+    QString map_config_path;
+
+    QString config_path;
 
 signals:
     void msgSignal(bool msg);
@@ -47,6 +66,8 @@ public slots:
     void MissionCheck(QString uuid);
 
     void onDisconnected();
+
+    void send_img_package(QString map_config_path,int image_file_size,QString signature,QString fileName);
 
 private:
 

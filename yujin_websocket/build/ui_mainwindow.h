@@ -57,7 +57,7 @@ public:
         te_send_msg->setGeometry(QRect(270, 130, 201, 401));
         label_2 = new QLabel(centralwidget);
         label_2->setObjectName(QString::fromUtf8("label_2"));
-        label_2->setGeometry(QRect(140, 90, 61, 31));
+        label_2->setGeometry(QRect(130, 90, 61, 31));
         label_2->setTextFormat(Qt::RichText);
         label_3 = new QLabel(centralwidget);
         label_3->setObjectName(QString::fromUtf8("label_3"));

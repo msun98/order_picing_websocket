@@ -33,17 +33,17 @@ void websocket::open()
     }
 
     timer = new QTimer(this);
-//    connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-//    timer->start(100);
+    //    connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    //    timer->start(100);
 }
 
 void websocket::onNewConnection(){
     QWebSocket *pSocket = server->nextPendingConnection();
 
     connect(pSocket, SIGNAL(textMessageReceived(QString)), this, SLOT(onTextMessageReceived(QString)));
-//    connect(pSocket, SIGNAL(binaryMessageReceived(QByteArray)), this, SLOT(onBinaryMessageReceived(QByteArray)));
+    //    connect(pSocket, SIGNAL(binaryMessageReceived(QByteArray)), this, SLOT(onBinaryMessageReceived(QByteArray)));
     connect(pSocket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
-//    connect(pMP, SIGNAL(UpdateUI()), this, SLOT(MissionCheck(QString uuid)));
+    //    connect(pMP, SIGNAL(UpdateUI()), this, SLOT(MissionCheck(QString uuid)));
 
     clients << pSocket;
 
@@ -101,12 +101,14 @@ void websocket::onTextMessageReceived(QString message) //comand msg
     QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
     emit msgReciveSignal(message);// ui를 통해 메시지를 확인하기 위함.
 
-    if(pClient){
+    if(pClient)
+    {
         QJsonObject json;
         QJsonDocument doc_json = QJsonDocument::fromJson(message.toUtf8());
         json = doc_json.object();
 
-        if(json["msg_type"] == "command"){
+        if(json["msg_type"] == "command")
+        {
             // Command Msg
             QString entry = json["entry"].toString();
             QString action = json["do"].toString();
@@ -120,15 +122,15 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             {
                 //4.1 Move
                 QJsonObject tempDest = params["dest"].toObject();
-//                QString mm = QJsonDocument(tempDest).toJson(QJsonDocument::Compact);
-//                qDebug()<<mm;
+                //                QString mm = QJsonDocument(tempDest).toJson(QJsonDocument::Compact);
+                //                qDebug()<<mm;
 
                 double x = tempDest["x"].toDouble();
                 double y = tempDest["y"].toDouble();
                 double theta = tempDest["theta"].toDouble();
 
                 qDebug()<<"x :"<<x<<",y :"<<y<<",theta :"<<theta;
-//                pMP->MoveOmron(x,y,theta);
+                //                pMP->MoveOmron(x,y,theta);
             }
 
             else if(action == "dock")
@@ -140,7 +142,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                 qDebug()<<"marker_id : "<<marker_id<<"direction : "<<direction;
 
-//                pMP->MoveOmron(x,y,theta);
+                //                pMP->MoveOmron(x,y,theta);
             }
 
             else if(action == "pause")
@@ -149,9 +151,9 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 //robot에 Pause 명령줘야함.
                 qDebug()<<"Pause";
 
-//                qDebug()<<"stop";
-//                pClient->sendTextMessage("stop");
-//                pMP->StopOmron();
+                //                qDebug()<<"stop";
+                //                pClient->sendTextMessage("stop");
+                //                pMP->StopOmron();
             }
 
             else if(action == "resume")
@@ -159,8 +161,8 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 //4.5 Resume
                 qDebug()<<"Resume";
                 //robot에 stop 명령줘야함.
-//                pClient->sendTextMessage("stop");
-//                pMP->StopOmron();
+                //                pClient->sendTextMessage("stop");
+                //                pMP->StopOmron();
             }
 
             else if(action == "stop")
@@ -168,266 +170,318 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 //4.6 Stop
                 qDebug()<<"stop";
                 //robot에 stop 명령줘야함.
-//                pClient->sendTextMessage("stop");
-//                pMP->StopOmron();
+                //                pClient->sendTextMessage("stop");
+                //                pMP->StopOmron();
             }
 
             else if(action == "get_map_info_list")
             {
                 //4.8 Get Map Info List
-////                QJsonObject json_data;//map 의 개수가 증가함에 따라 json object 의 개수가 늘어야함.
+
                 QJsonObject json_out;
                 QJsonArray json_arr;
-//                QJsonObject json_out;
+                //                QJsonObject json_out;
                 json_out["msg_type"] = "cmd_result";
                 json_out["result"] = "success";
-                json_out["error_info"] = "null";
+                json_out["error_info"] = QJsonValue::Null;
 
-                ////////////map directory 내부에 있는 파일 list 반환////////////
-                /// \brief dir
-//                QDir::homePath()+"maps/map_4/";
-                QDir dir("/home/rainbow/maps/map_4");
-//                QDir dir("maps/map_4/");
-                QFileInfoList list = dir.entryInfoList(QDir::Files, QDir::NoSort);
+                ////////////map directory 내부에 있는 폴더 list 반환////////////
 
-                for (int i = 0; i < list.size(); ++i)
+                QDir dir("/home/rainbow/maps/");
+                foreach(QFileInfo item, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries) )
                 {
-                   QJsonObject json_data;
-                   QFileInfo fInfo = list.at(i);
-                   QString fPath = fInfo.absoluteFilePath();
+                    if(item.isDir())
+                    {
 
-                   QString filelist = fPath.section("/home/rainbow/maps/map_4", 1);
+                        QJsonObject json_data;
+                        QString filelist = item.baseName();
+                        qDebug()<<filelist;
+                        //                        qDebug() << "Dir: " << filelist; // 폴더 출력
+                        json_data["data"] = data("Rainbow","get_map_info_list","RB", "RB", filelist);
+                        QJsonObject data = json_data["data"].toObject();
 
-//                   bool ret = filelist.contains(".png", Qt::CaseInsensitive);
-
-//                   qDebug()<<ret;
-
-                   if (filelist.contains(".png", Qt::CaseInsensitive)==true)
-                   {
-
-//                       qDebug()<<"yes";
-                       json_data["data"] = data("OMRON","get_map_info_list","LD250", "MIR", filelist);
-//                       QJsonObject data = json_data["data"];
-                       QJsonObject data = json_data["data"].toObject();
-                       json_arr.insert(i,data);//디렉토리 내부에 있는 파일 중 1번 out(omron에 들어가는 파일의 개수가 많아지면 0이 다른 숫자로 바뀌어야함.)
-                       json_out["data"] = json_arr;
-                   }
-
-                   else{
-                       qDebug()<<"no";
-                   }
+                        //                        qDebug()<<"data : "<<data;
+                        json_arr.insert(0,data);//대괄호 조건에 맞추기 위함.
+                        json_out["data"] = json_arr;
+                        QString map_info = QJsonDocument(json_out).toJson(QJsonDocument::Indented);//보낸 내용 확인용
+                        emit msgSendSignal(map_info);
+                        pClient->sendTextMessage(map_info);
+                    }
+                    //                    else if(item.isFile())
+                    //                    {
+                    //                        qDebug() << "File: " << item.absoluteFilePath(); // 파일 출력
+                    //                    }
 
 
+                    /*              파일 열어서 확인할 때 사용.
+//                QDir dir("/home/rainbow/maps/map_4");
+//                QFileInfoList list = dir.entryInfoList(QDir::Files, QDir::NoSort);
 
+//                qDebug()<<dir;
+
+//                for (int i = 0; i < list.size(); ++i)
+//                {
+//                   QJsonObject json_data;
+//                   QFileInfo fInfo = list.at(i);
+//                   QString fPath = fInfo.absoluteFilePath();
+
+//                   QString filelist = fPath.section("/home/rainbow/maps", 0);
+
+//                   qDebug()<<"filelist : "<<filelist;
+//                   bool ret = filelist.contains(".png", Qt::CaseInsensitive); //png 인 것들만 이름보냄.
+////                   if (ret==true)
+////                   {
+////                       qDebug()<<"filelist : "<<filelist;
+//                       json_data["data"] = data("Rainbow","get_map_info_list","RB", "RB", filelist);
+//                       QJsonObject data = json_data["data"].toObject();
+
+//                        qDebug()<<"data : "<<data;
+//                       json_arr.insert(0,data);//대괄호 조건에 맞추기 위함.
+//                       json_out["data"] = json_arr;
+//                       QString map_info = QJsonDocument(json_out).toJson(QJsonDocument::Indented);//보낸 내용 확인용
+//                       emit msgSendSignal(map_info);
+////                   }
+/// */
                 }
-
-                 if(!error_info.empty())
-                 {
-                     json_out["error_info"] = error_info;
-                 }
-                 QJsonDocument doc_json(json_out);
-                 QString str_json(doc_json.toJson(QJsonDocument::Indented));
-//                QJsonObject data = json_data["data"].toObject();
-                pClient->sendTextMessage(str_json);
             }
-
 
             else if(action == "get_map_info")
             {
                 //4.9 Get Map Info
-                QJsonObject json;
+                //                QJsonObject json;
                 QJsonObject json_data;
-                json["msg_type"] = "cmd_result"; //만약 명령 수행시 성공했다면 result -> success (omron 이동 하면 success!)
-                json["result"] = "success";
+                QJsonObject json_out;
+                QString map_id;
 
-                if(!error_info.empty())
-                {
-                    json["error_info"] = error_info;
-                }
-                json["uuid"] = uuid;
+                json_out["msg_type"] = "cmd_result";
+                json_out["result"] = "success";
+                json_out["error_info"] = QJsonValue::Null;
 
-
-            //    QJsonArray json_arr;
-
-                json_data["origin_px"] = 5;
-                json_data["origin_py"] = 5;
-                json_data["scale_m2px"] = 20.0;
-                json_data["filpped"] = "false";
-//                qDebug()<<params["map_id"].toString();
+                ////////////map directory 내부에 있는 폴더 list 반환////////////
 
                 if (params["map_id"].toString() == "")
                 {
-                    json["error_info"] = "null";
-                    json_data["map_id"] = "original.png";
-                    json_data["map_alias"] = 20.0;
-                    json_data["width_gm"] = 500;
-                    json_data["height_gm"] = 500;
-                }
+                    //for get map name
+                    QString config_path = QDir::homePath()+"/robot_config.ini";
+                    QFileInfo config_info(config_path);
+                    if(config_info.exists() && config_info.isFile())
+                    {
+                        QSettings settings(config_path, QSettings::IniFormat);
+                        map_id = settings.value("FLOOR/map_name").toString();
+                        json_data["map_id"] = map_id;
+                    }
 
+                    //for get map info
+                    map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
+                    qDebug()<<map_config_path;
+
+                    QFileInfo map_config_info(map_config_path);
+                    if(map_config_info.exists() && map_config_info.isFile())
+                    {
+                        QSettings map_settings(map_config_path, QSettings::IniFormat);
+                        //                        map_id = settings.value("FLOOR/map_name").toString();
+
+                        json_data["map_alias"] = "rainbow";
+                        json_data["origin_px"] = map_settings.value("map_metadata/map_w").toDouble();
+                        json_data["origin_py"] = map_settings.value("map_metadata/map_origin_v").toDouble();
+                        json_data["width_gm"] = map_settings.value("map_metadata/map_w").toDouble();
+                        json_data["height_gm"] = map_settings.value("map_metadata/map_h").toDouble();
+                        double map_val = 1/map_settings.value("map_metadata/map_grid_width").toDouble();
+                        double map_val_round = round(map_val);
+                        //                        int val = map_val.toInt();
+                        //                        qDebug()<<val;
+                        json_data["scale_m2px"] = map_val_round;
+                        json_data["flipped"] = "false";
+                    }
+                }
                 else
                 {
-                    //나중에 유진에서 요청하는 맵 이름으로 변경하여 내보내기
-                    json_data["map_id"] = params["map_id"].toString();;
-                    json_data["map_alias"] = 20.0;
-                    json_data["width_gm"] = 500;
-                    json_data["height_gm"] = 500;
+                    //for get map name
+                    map_id = params["map_id"].toString();
+                    json_data["map_id"] = map_id;
+
+                    //for get map info
+                    map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
+                    qDebug()<< map_config_path;
+
+                    QFileInfo map_config_info(map_config_path);
+                    if(map_config_info.exists() && map_config_info.isFile())
+                    {
+                        QSettings map_settings(map_config_path, QSettings::IniFormat);
+                        //                        map_id = settings.value("FLOOR/map_name").toString();
+
+                        json_data["map_alias"] = "rainbow";
+                        json_data["origin_px"] = map_settings.value("map_metadata/map_origin_u").toDouble();
+                        json_data["origin_py"] = map_settings.value("map_metadata/map_origin_v").toDouble();
+                        json_data["width_gm"] = map_settings.value("map_metadata/map_w").toDouble();
+                        json_data["height_gm"] = map_settings.value("map_metadata/map_h").toDouble();
+                        double map_val = 1/map_settings.value("map_metadata/map_grid_width").toDouble();
+                        double map_val_round = round(map_val);
+                        //                        int val = map_val.toInt();
+                        //                        qDebug()<<val;
+                        json_data["scale_m2px"] = map_val_round;
+                        json_data["flipped"] = "false";
+                    }
                 }
-                json["data"] = json_data;
 
+                json_out["data"] = json_data;
 
-                QJsonDocument doc_json(json);
+                QJsonDocument doc_json(json_out);
                 QString str_json(doc_json.toJson(QJsonDocument::Indented));
-                pClient->sendTextMessage(str_json);
+                //                    qDebug()<<str_json;
 
+                emit msgSendSignal(str_json); //for debuging
+                pClient->sendTextMessage(str_json);
             }
 
             else if(action == "get_map_data")
             {
                 //4.10 Get Map Data
-//                qDebug()<<params["map_id"];
+                //                qDebug()<<params["map_id"];
                 QString id = params["map_id"].toString();//server 에서 요청한 map 의 id 파싱
                 QJsonObject json;
                 QJsonObject json_data;
-                QString fileName;
+                QString fileName = params["filename"].toString();
+                QString filename;
+
+                //                qDebug()<<"yujin file name : "<<fileName;
 
                 int image_file_size;
                 json_data["data_type"] = params["data_type"];
                 json["msg_type"] = "cmd_result";
                 json["result"] = "success";
-                json["error_info"] = "null";
-//                json_data["map_id"] = params["map_id"];
+                json["error_info"] = QJsonValue::Null;
+                //                json_data["map_id"] = params["map_id"];
+                //                qDebug()<<id;
 
                 json["uuid"] = uuid;
-                /*cv::Mat img;
-                QByteArray fileData_byte ;
+                //                map_config_path = QDir::homePath()+"/maps/map_4/map_edited.png";
 
-                if (id == "")
+                if (id == "") //현재 slam에서 사용중인 map
                 {
+                    config_path = QDir::homePath()+"/robot_config.ini";
+                    QFileInfo config_info(config_path);
+                    if(config_info.exists() && config_info.isFile())
+                    {
+                        QSettings settings(config_path, QSettings::IniFormat);
+                        map_id = settings.value("FLOOR/map_name").toString();
+                        fileName = map_id;
+                        json_data["map_id"] = map_id;
+                        json_data["filename"] = map_id;
+                        json_data["data_type"] = params["data_type"].toString();
+                    }
 
-                    id = "original.png";//현재 사용하고 있는 map
-                    fileName = id;
-
-                    QFile* file = new QFile("map/"+id);
-                    file->open(QFile::ReadOnly);
-                    fileData_byte=file->readAll();
-//                    fileData_byte = file->open(QFile::ReadOnly | QFile::Text);
-                    image_file_size = fileData_byte.size();
-
-
-//                    QString imageFileSize = QString::number(image_file_size);
-//                    reverse(imageFileSize.begin(), imageFileSize.end()); //글자 위치 반전시킬 때
-
-//                    json_data["map_id"] = map_id;
-                    json_data["filename"] = id;
+                    if (params["data_type"].toString() == "map_image_png")
+                    {
+                        //for get map name
+                        map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                        //                         }
+                    }
+                    else if(params["data_type"].toString() == "map_package")
+                    {
+                        //for get map_package
+                        map_config_path = QDir::homePath()+"/maps/"+map_id+".tar.xz";
+                        //                         }
+                    }
                     json_data["filesize"] = image_file_size;
-                    json_data["flipped"] = false;
-                    img = cv::imread("map/"+id.toStdString(),cv::IMREAD_GRAYSCALE); // 이미지 읽기
+                    qDebug()<<"image : "<<image_file_size;
 
-//                    mapImg=img;
-//                    imshow("지금 사용하고 있는 맵",img);*/
-                    //바이너리로 변경하여 유진로봇 api에 쏴주어야함.
+                    json["data"] = json_data;
+
+                    QJsonDocument doc_json(json);
+                    QString str_json(doc_json.toJson(QJsonDocument::Indented));
+                    //                    qDebug()<<str_json;
+
+                    emit msgSendSignal(str_json); //for debuging
+                    pClient->sendTextMessage(str_json);
+                    send_img_package(map_config_path,image_file_size,params["data_type"].toString(),fileName);
                 }
 
                 else
                 {
-                    qDebug()<<"hi";
-                    //나중에 유진에서 요청하는 맵 이름으로 변경하여 내보내기
-                    /*fileName=id;
-                    id = "map/"+id;
-                    QFile* file = new QFile(id);
-                    file->open(QFile::ReadOnly);
-                    fileData_byte=file->readAll();
-//                    fileData_byte = file.toUtf8();
-//                    fileData_byte = file->open(QFile::ReadOnly | QFile::Text);
-                    image_file_size = fileData_byte.size();
-//                    QString imageFileSize = QString::number(image_file_size);
-//                    reverse(imageFileSize.begin(), imageFileSize.end());
+                    //만약 리스트안에 없는 파일을 달라고 하면 터지지 않도록 예외처리 해주어야함.
+                    map_id = id;
+                    qDebug()<<"map id : "<<map_id;
 
-//                    cout<<size1<<endl;
+                    QString map_path = QDir::homePath()+"/maps/";
+                    QDir dir(map_path);
+                    qDebug()<<"map_path id : "<<map_path;
 
+                    QStringList itemlist; //임시적으로 데이터 길이 늘려놓음.
+                    //                    QString filelist;
 
-                    json_data["map_id"] = fileName;
-                    json_data["filename"] = fileName;
-                    json_data["filesize"] = image_file_size;
-                    json_data["flipped"] = false;
-                    img = cv::imread(id.toStdString(),cv::IMREAD_GRAYSCALE); // 이미지 읽기－￣
+                    foreach(QFileInfo item, dir.entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries) )
+                    {
+                        QString filelist;
+                        if(item.isDir())
+                        {
+
+                            filelist = item.baseName();
+                            itemlist += filelist;
+                        }
+                    }
+                    qDebug()<<"itemlist : "<<itemlist;
+
+                    if(itemlist.filter(id).count() != 0)
+                    {
+                        qDebug()<<"파일이 있습니다.";
+                        //                        qDebug()<<"map_id : " <<params["data_type"].toString();
+
+                        if (params["data_type"].toString() == "map_image_png")
+                        {
+                            //for get map name
+
+                            qDebug()<<"map_id : "<<map_id;
+                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                            qDebug()<<"map_config_path :"<<map_config_path;
+                            fileName = map_id;
+                            json_data["map_id"] = map_id;
+                            json_data["filename"] = map_id;
+                            json_data["data_type"] = params["data_type"].toString();
+
+                        }
+                        else if (params["data_type"].toString() == "map_package")
+                        {
+                            //for get map name
+                            map_config_path = QDir::homePath()+"/maps/"+map_id+".tar.xz";
+                            //                        map_id = id;
+                            fileName = map_id+".tar.xz";
+                            json_data["map_id"] = map_id;
+                            json_data["filename"] = map_id;
+                            json_data["data_type"] = params["data_type"].toString();
+                        }
+                        json_data["filesize"] = image_file_size;
+                        qDebug()<<"image : "<<image_file_size;
+
+                        json["data"] = json_data;
+
+                        QJsonDocument doc_json(json);
+                        QString str_json(doc_json.toJson(QJsonDocument::Indented));
+                        //                    qDebug()<<str_json;
+
+                        emit msgSendSignal(str_json); //for debuging
+                        pClient->sendTextMessage(str_json);
+                        send_img_package(map_config_path,image_file_size,params["data_type"].toString(),fileName);
+                    }
+
+                    else
+                    {
+                        qDebug()<<"파일이 없습니다.";
+                    }
 
                 }
 
-                imshow("맵",img);
-                json["data"] = json_data;
-
-                QJsonDocument doc_json(json);
-                QString str_json(doc_json.toJson(QJsonDocument::Indented));
-//                cout<<img<<endl;
-///////////////////////////////////////////////////cmd/////////////////////////////////////////////////////
-                QString prifix = "FILE_DATA";
-                QByteArray prifix_byte = prifix.toUtf8();
-
-                QString signature = json_data["data_type"].toString();
-                if (signature == "map_image_png")
-                {
-                    signature = "MAP_IMAGE_PNG___";
-                }
-                else
-                {
-                    signature = "MAP_PACKAGE_COMP";
-                }
-
-
-
-                int header_size = signature.size()+fileName.size();
-                U_SHORT_CHAR u_headersize;
-                u_headersize.data_s = header_size;
-                prifix_byte.append(u_headersize.data_c[0]);
-                prifix_byte.append(u_headersize.data_c[1]);
-
-                U_INT_CHAR u_filesize;
-                u_filesize.data_i = image_file_size;
-
-                QByteArray signature_byte = signature.toUtf8();
-                prifix_byte.append(signature_byte);
-
-                QByteArray fileName_byte = fileName.toUtf8();
-                prifix_byte.append(fileName_byte);
-                prifix_byte.append(u_filesize.data_c[0]);
-                prifix_byte.append(u_filesize.data_c[1]);
-                prifix_byte.append(u_filesize.data_c[2]);
-                prifix_byte.append(u_filesize.data_c[3]);
-
-                prifix_byte.append(fileData_byte);
-
-                QFile file("prifix_byte.bin");
-
-                file.open(QIODevice::WriteOnly);
-                file.write(fileData_byte);
-                file.close();
-
-                pClient->sendTextMessage(str_json);
-                pClient->sendBinaryMessage(prifix_byte);*/
             }
-
-//            else if(action == "set_map_data")
-//            {
-//                //4.11 Set Map Data
-//            }
-
-
-//            QString uuid = json["uuid"].toString();￣
-
-//            QJsonObject error_info;
-//            sendCommandAck(pClient, "success", error_info, uuid);
-
-//            pClient->sendTextMessage("end");
 
         }
     }
 }
 
-QJsonObject websocket::data(QString robot_manufacture, QString action,QString robot_type, QString map_id, QString map_alias){
+QJsonObject websocket::data(QString robot_manufacture, QString action,QString robot_type, QString map_id, QString map_alias)
+{
 
     QJsonObject json_data_map;
-//    QJsonArray json_arr;
+    //    QJsonArray json_arr;
     QJsonObject json_out;
 
     if (action == "get_map_info_list")
@@ -437,9 +491,9 @@ QJsonObject websocket::data(QString robot_manufacture, QString action,QString ro
         json_data_map["map_id"] = map_id;
         json_data_map["map_alias"] = map_alias;
 
-//        QJsonArray json_arr;
-//        json_arr.insert(0,json_data_map);//디렉토리 내부에 있는 파일 중 1번 out(omron에 들어가는 파일의 개수가 많아지면 0이 다른 숫자로 바뀌어야함.)
-//        //    json_out["data"] = json_arr;
+        //        QJsonArray json_arr;
+        //        json_arr.insert(0,json_data_map);//디렉토리 내부에 있는 파일 중 1번 out(omron에 들어가는 파일의 개수가 많아지면 0이 다른 숫자로 바뀌어야함.)
+        //        //    json_out["data"] = json_arr;
         json_out = json_data_map;
     }
 
@@ -448,24 +502,102 @@ QJsonObject websocket::data(QString robot_manufacture, QString action,QString ro
 }
 
 void websocket::MissionCheck(QString uuid){
-//    QJsonObject json;
+    //    QJsonObject json;
     QJsonObject error_info;
-//    QString uuid = uuid;
+    //    QString uuid = uuid;
     for(int i=0; i<clients.size(); i++)
     {
         QWebSocket *pSocket = clients[i];
 
-//        if (pMP->check == 1)
-//        {
-//            sendCommandResult(pSocket, "success", error_info, uuid);
-//            qDebug()<<"success";
-//        }
+        //        if (pMP->check == 1)
+        //        {
+        //            sendCommandResult(pSocket, "success", error_info, uuid);
+        //            qDebug()<<"success";
+        //        }
 
-//        else if (pMP->check == 0)
-//        {
-//            sendCommandResult(pSocket, "Failed", error_info, uuid);
-//            qDebug()<<"Failed";
-//        }
+        //        else if (pMP->check == 0)
+        //        {
+        //            sendCommandResult(pSocket, "Failed", error_info, uuid);
+        //            qDebug()<<"Failed";
+        //        }
+    }
+}
+
+void websocket::send_img_package(QString map_config_path,int image_file_size,QString signature,QString fileName)
+{
+    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
+    //for get map info
+
+    file = new QFile(map_config_path);
+    qDebug()<<"path : "<<map_config_path;
+    file->open(QFile::ReadOnly);
+    fileData_byte = file->readAll();
+
+    image_file_size = fileData_byte.size();
+
+    QString prifix = "FILE_DATA";
+    QByteArray prifix_byte = prifix.toUtf8();
+
+    //    QString signature = json_data["data_type"].toString();
+    //    QString signature = signature;
+    if (signature == "map_image_png")
+    {
+        signature = "MAP_IMAGE_PNG___";
+    }
+    else
+    {
+        signature = "MAP_PACKAGE_COMP";
+    }
+
+    int header_size = signature.size()+fileName.size();
+    qDebug()<<"fileName :"<<fileName;
+    qDebug()<<"fileName size :"<<fileName.size();
+    qDebug()<<"header_size :"<<header_size;
+    U_SHORT_CHAR u_headersize;
+    u_headersize.data_s = header_size;
+    prifix_byte.append(u_headersize.data_c[0]);
+    prifix_byte.append(u_headersize.data_c[1]);
+
+    U_INT_CHAR u_filesize;
+    u_filesize.data_i = image_file_size;
+
+    QByteArray signature_byte = signature.toUtf8();
+    prifix_byte.append(signature_byte);
+
+    QByteArray fileName_byte = fileName.toUtf8();
+    prifix_byte.append(fileName_byte);
+    prifix_byte.append(u_filesize.data_c[0]);
+    prifix_byte.append(u_filesize.data_c[1]);
+    prifix_byte.append(u_filesize.data_c[2]);
+    prifix_byte.append(u_filesize.data_c[3]);
+
+    prifix_byte.append(fileData_byte);
+
+    //파일 잘 갔는지 디버깅용
+
+
+
+    pClient->sendBinaryMessage(prifix_byte);
+    //                         qDebug()<<"msg : "<<prifix_byte;
+    //                         pClient->sendBinaryMessage(fileData_byte);
+
+    //                    }
+    qDebug()<<"signature : "<<signature;
+
+    if (signature == "MAP_IMAGE_PNG___")
+    {
+        //이미지 잘 전송되었는지 디버깅용
+
+        qDebug()<<"jjj";
+
+        QFile file("send_IMG.bin");
+
+        file.open(QIODevice::WriteOnly);
+        file.write(fileData_byte);
+        file.close();
+        img = cv::imread(map_config_path.toStdString(),cv::IMREAD_GRAYSCALE); // 이미지 읽기
+        cv::resize(img, src, cv::Size(img.cols/3, img.rows/3 ), 0, 0, CV_INTER_NN );
+        imshow("지금 사용하고 있는 맵",src);
     }
 }
 
@@ -475,26 +607,26 @@ void websocket::sendNotice(QWebSocket *client_socket){
     json["robot_state"] = "ready";
     json["navi_mode"] = "navigate";
 
-//    QJsonObject json_robot;
-//    json_robot["x"] = QString::number(networkThread->x);
-//    json_robot["y"] = QString::number(networkThread->y);
-//    json_robot["theta"] = QString::number(networkThread->heading);
-//    json["robot_pose"] = json_robot;
+    //    QJsonObject json_robot;
+    //    json_robot["x"] = QString::number(networkThread->x);
+    //    json_robot["y"] = QString::number(networkThread->y);
+    //    json_robot["theta"] = QString::number(networkThread->heading);
+    //    json["robot_pose"] = json_robot;
 
     QJsonObject json_map;
     json_map["map_id"] = "test";
     json_map["map_alias"] = "1F";
     json["map"] = json_map;
 
-//    QJsonObject json_battery;
-//    json_battery["level"] = QString::number(networkThread->baterry);
-//    json_battery["in_charging"] = false;
-//    json["battery"] = json_battery;
+    //    QJsonObject json_battery;
+    //    json_battery["level"] = QString::number(networkThread->baterry);
+    //    json_battery["in_charging"] = false;
+    //    json["battery"] = json_battery;
 
     QJsonDocument doc_json(json);
     //QString str_json(doc_json.toJson(QJsonDocument::Compact));
     QString str_json(doc_json.toJson(QJsonDocument::Indented));
-//    client_socket->sendTextMessage("notice");
+    //    client_socket->sendTextMessage("notice");
     client_socket->sendTextMessage(str_json);
 }
 
@@ -514,5 +646,5 @@ void websocket::sendAck(QString uuid)
     emit msgSendSignal(str_json);
     pClient->sendTextMessage(str_json);
 
-//    client_socket->sendTextMessage(json);
+    //    client_socket->sendTextMessage(json);
 }
