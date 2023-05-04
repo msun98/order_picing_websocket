@@ -3,6 +3,22 @@
 
 #include <filesystem>
 
+
+/*
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent)
+{
+    ui = new Ui::MainWindow();
+    ui->setupUi(this);
+}
+--------------------------------------------
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)//new Ui::MainWindow는 mainwindow 클래스에서 호출되지 않고 Ui::MainWindow에 선언된 setupUI메소드를 사용함.)
+
+같은 내용임.
+*/
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)

@@ -11,8 +11,6 @@ typedef union{
     char    data_c[2];
 }U_SHORT_CHAR;
 
-
-
 websocket::websocket(QObject *parent) : QObject(parent)
 {
 
@@ -27,14 +25,14 @@ websocket::~websocket()
 void websocket::open()
 {
     server = new QWebSocketServer("rb_websocket", QWebSocketServer::NonSecureMode, this);
-    if(server->listen(QHostAddress::Any, 38081)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출
+    if(server->listen(QHostAddress::Any, 1111)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출
     {
         connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
     }
 
     timer = new QTimer(this);
-    //    connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-    //    timer->start(100);
+    connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+    timer->start(100);
 }
 
 void websocket::onNewConnection(){
@@ -116,7 +114,6 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             uuid = json["uuid"].toString();
             QJsonObject error_info;
             sendAck(uuid);
-
 
             if(action == "move")
             {
@@ -342,7 +339,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 QJsonObject json;
                 QJsonObject json_data;
                 QString fileName = params["filename"].toString();
-                QString filename;
+                //                QString filename;
 
                 //                qDebug()<<"yujin file name : "<<fileName;
 
@@ -415,7 +412,6 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                         QString filelist;
                         if(item.isDir())
                         {
-
                             filelist = item.baseName();
                             itemlist += filelist;
                         }
@@ -473,6 +469,142 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
             }
 
+            else if(action == "set_map_data")
+            {
+                //4.11 Set Map Data
+            }
+
+            else if(action == "get_robot_info")
+            {
+                //4.12 Get robot info
+
+                QJsonObject json_out;
+                QString robot_id,map_id;
+                QJsonObject json_data;
+
+                json_out["msg_type"] = "cmd_result";
+                json_out["result"] = "success";
+                json_out["error_info"] = QJsonValue::Null;
+
+                QString config_path = QDir::homePath()+"/robot_config.ini";
+                QFileInfo config_info(config_path);
+                if(config_info.exists() && config_info.isFile())
+                {
+                    QSettings settings(config_path, QSettings::IniFormat);
+                    robot_id = settings.value("ROBOT_SW/robot_id").toString();
+                    map_id = settings.value("FLOOR/map_name").toString();
+                    QJsonObject json_map;
+
+                    json_map["map_id"] = map_id;
+                    json_map["map_alias"] = "1F";
+                    json_data["map"] = json_map;
+                    //                    json_data =
+
+                    //                    QJsonObject json_robot_id;
+                    json_data["robot_id"] = robot_id;
+                    json_data["robot_alias"] = robot_id;
+                    //                    json_data["map"]=json_robot_id;
+
+                }
+
+                QJsonObject json_pose;
+                json_pose["x"] = 5;
+                json_pose["y"] = 5;
+                json_pose["th"] = 10;
+                json_data["robot_pose"] = json_pose;
+
+                QJsonObject json_battery;
+                json_battery["level"] = 90;
+                json_battery["in_charging"] = false;
+                json_data["battery"] = json_battery;
+
+                json_data["docking_direction"] = "foward";
+                json_out["data"]=json_data;
+
+                json_out["uuid"]=uuid;
+
+                QJsonDocument doc_json(json_out);
+                QString str_json(doc_json.toJson(QJsonDocument::Indented));
+
+                emit msgSendSignal(str_json); //for debuging
+                pClient->sendTextMessage(str_json);
+
+
+            }
+
+            else if(action == "pick")
+            {
+                //4.13 pick item
+
+                QJsonObject json_out;
+                QString map_id;
+
+                //                QJsonObject tempDest = params["item_id"].toObject();
+                //                QString mm = QJsonDocument(tempDest).toJson(QJsonDocument::Compact);
+                //                qDebug()<<mm;
+
+                //                params
+                QString _id = params["item_id"].toString();
+                int item_id = params["item_id"].toInt();
+                int item_count = params["item_count"].toInt();
+                double shelve_height = params["shelve_height"].toDouble();
+                double shelve_degree = params["shelve_degree"].toDouble();
+                qDebug()<<_id;
+                std::cout<<item_id<<item_count<<shelve_height<<shelve_degree<<std::endl;
+
+                json_out["msg_type"] = "cmd_result";
+                json_out["result"] = "success";
+                json_out["error_info"] = QJsonValue::Null;
+
+                map_id = params["map_id"].toString();
+
+                QJsonObject json_data;
+                json_data["success_count"]=3;
+                json_data["failure_count"]=0;
+                json_out["data"]=json_data;
+
+                json_out["uuid"]=uuid;
+
+                QJsonDocument doc_json(json_out);
+                QString str_json(doc_json.toJson(QJsonDocument::Indented));
+
+                emit msgSendSignal(str_json); //for debuging
+                pClient->sendTextMessage(str_json);
+            }
+
+            else if(action == "set_position")
+            {
+                //4.11 Set position (ini file 변경.)
+
+                QJsonObject json_out;
+                QString map_id;
+
+                json_out["msg_type"] = "cmd_result";
+                json_out["result"] = "success";
+                json_out["error_info"] = QJsonValue::Null;
+
+                map_id = params["map_id"].toString();
+
+                QString config_path = QDir::homePath()+"/robot_config.ini";
+                QFileInfo config_info(config_path);
+                if(config_info.exists() && config_info.isFile())
+                {
+                    QSettings settings(config_path, QSettings::IniFormat);
+                    settings.setValue("FLOOR/map_name",map_id);
+                    settings.setValue("FLOOR/map_path",QDir::homePath()+"/maps/"+map_id);
+                    //                    json_data["map_id"] = map_id;
+
+
+                }
+
+                QJsonDocument doc_json(json_out);
+                QString str_json(doc_json.toJson(QJsonDocument::Indented));
+
+                emit msgSendSignal(str_json); //for debuging
+                pClient->sendTextMessage(str_json);
+
+
+            }
         }
     }
 }
@@ -578,19 +710,13 @@ void websocket::send_img_package(QString map_config_path,int image_file_size,QSt
 
 
     pClient->sendBinaryMessage(prifix_byte);
-    //                         qDebug()<<"msg : "<<prifix_byte;
-    //                         pClient->sendBinaryMessage(fileData_byte);
-
-    //                    }
     qDebug()<<"signature : "<<signature;
 
     if (signature == "MAP_IMAGE_PNG___")
     {
         //이미지 잘 전송되었는지 디버깅용
 
-        qDebug()<<"jjj";
-
-        QFile file("send_IMG.bin");
+        QFile file("send_IMG.bin");// bin file 생성
 
         file.open(QIODevice::WriteOnly);
         file.write(fileData_byte);
