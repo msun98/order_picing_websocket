@@ -32,6 +32,7 @@ public:
     QLabel *label_3;
     QLabel *label_4;
     QLabel *label_5;
+    QLabel *la_connection_check;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -74,6 +75,10 @@ public:
         label_5->setStyleSheet(QString::fromUtf8("image: url(:/img/rainbow.png);"));
         label_5->setFrameShadow(QFrame::Raised);
         label_5->setTextFormat(Qt::RichText);
+        la_connection_check = new QLabel(centralwidget);
+        la_connection_check->setObjectName(QString::fromUtf8("la_connection_check"));
+        la_connection_check->setGeometry(QRect(240, 50, 221, 31));
+        la_connection_check->setTextFormat(Qt::RichText);
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
@@ -92,11 +97,12 @@ public:
     {
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", nullptr));
         label->setText(QApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:24pt; font-weight:600; color:#729fcf;\">websocket</span></p></body></html>", nullptr));
-        te_label->setText(QString());
+        te_label->setText(QApplication::translate("MainWindow", "\355\201\264\353\235\274\354\235\264\354\226\270\355\212\270 \353\257\270\354\240\221\354\206\215", nullptr));
         label_2->setText(QApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:10pt; font-weight:600;\">\353\260\233\354\235\200\353\251\224\354\213\234\354\247\200</span></p></body></html>", nullptr));
         label_3->setText(QApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:10pt; font-weight:600;\">\353\263\264\353\202\270\353\251\224\354\213\234\354\247\200</span></p></body></html>", nullptr));
         label_4->setText(QApplication::translate("MainWindow", "<html><head/><body><p><br/></p></body></html>", nullptr));
         label_5->setText(QApplication::translate("MainWindow", "<html><head/><body><p><br/></p></body></html>", nullptr));
+        la_connection_check->setText(QApplication::translate("MainWindow", "<html><head/><body><p><span style=\" font-size:10pt; font-weight:600;\">connected with</span></p></body></html>", nullptr));
     } // retranslateUi
 
 };

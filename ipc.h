@@ -4,6 +4,26 @@
 #include <QObject>
 #include <QSharedMemory>
 #include <QDebug>
+
+// Eigen
+#include <Eigen/Core>
+#include <Eigen/Dense>
+
+// sophus
+#define SOPHUS_USE_BASIC_LOGGING
+#include <sophus/geometry.hpp>
+#include <sophus/se2.hpp>
+#include <sophus/interpolate.hpp>
+
+
+// opencv
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
+#include <opencv2/ximgproc.hpp>
+#include "opencv2/flann/miniflann.hpp"
+#include "cv_to_qt.h"
+
+
 class IPC : public QObject
 {
     Q_OBJECT
@@ -27,7 +47,6 @@ public:
     };
 
     struct STATUS
-            // 구조체 변수 정의함과 동시에 생성자에 의해서 특정값으로 초기화됨
     {
         uint32_t   tick = 0;
         int8_t     connection_m0 = 0;
@@ -59,7 +78,7 @@ public:
         STATUS()
         {
         }
-        STATUS(const STATUS& p)
+        STATUS(const STATUS& p)//const &는 읽기 전용, 참조자의 특성상 매개변수를 변경하면 원래 넘겨받은 데이터까지 변경될 가능성이 있으므로 이를 방지하기 위해 const 같이 사용
         {
             tick = p.tick;
             connection_m0 = p.connection_m0;
@@ -94,7 +113,7 @@ public:
     {
         uint32_t tick = 0;
         int32_t num = 0;
-        float x[512] = {0,};//모든 배열의 요소를 0으로 초기화(only 0만 가느)
+        float x[512] = {0,};
         float y[512] = {0,};
 
         PATH()
@@ -111,7 +130,7 @@ public:
 
     struct MAP
     {
-//        https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=kyed203&logNo=220056487775
+        //        https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=kyed203&logNo=220056487775
         uint32_t tick = 0;
         uint32_t width = 1000;
         uint32_t height = 1000;
@@ -131,7 +150,7 @@ public:
 
     struct IMG
     {
-        uint32_t tick = 0;        
+        uint32_t tick = 0;
         uint8_t serial[255] = {0,};
         uint32_t width = 480;
         uint32_t height = 270;
@@ -150,7 +169,7 @@ public:
         }
     };
 
-//for yujin websocket
+    //for yujin websocket
     struct POSE
     {
         uint32_t tick = 0;
@@ -171,6 +190,67 @@ public:
     };
 
 
+    struct MOBILE_POSE
+    {
+        double t;
+        cv::Vec3d pose; // global (x, y, th)
+        cv::Vec3d vel; // global (x_dot, y_dot, th_dot)
+        cv::Vec2d vw; // local (v, w)
+        uint32_t tick = 0;
+
+        MOBILE_POSE()
+        {
+            t = 0;
+            pose = cv::Vec3d(0,0,0);
+            vel = cv::Vec3d(0,0,0);
+            vw = cv::Vec2d(0,0);
+        }
+        MOBILE_POSE(const MOBILE_POSE& p)
+        {
+            tick = p.tick;
+            t = p.t;
+            pose = p.pose;
+            vel = p.vel;
+            vw = p.vw;
+        }
+    };
+
+    struct ROBOT_COMMAND
+    {
+        uint32_t tick = 0;
+        uint32_t robot_status = 0;
+
+        ROBOT_COMMAND()
+        {
+        }
+        ROBOT_COMMAND(const ROBOT_COMMAND& p)
+        {
+            tick = p.tick;
+            robot_status = p.robot_status;
+            //robot_status 1 = pause
+            //robot_status 2 = resume
+            //robot_status 3 = stop
+        }
+    };
+
+    struct SUCCESS_CHECK
+    {
+        uint32_t tick = 0;
+        bool check = 0;
+        //success_check = 0 -> success
+        //success_check = 1 -> fail
+
+        SUCCESS_CHECK()
+        {
+
+        }
+        SUCCESS_CHECK(const SUCCESS_CHECK& p)
+        {
+         tick = p.tick;
+         check = p.check;
+        }
+    };
+
 public:
     explicit IPC(QObject *parent = nullptr);
     ~IPC();
@@ -184,7 +264,11 @@ public:
     QSharedMemory shm_obs;
     QSharedMemory shm_cam0;
     QSharedMemory shm_cam1;
+
     QSharedMemory shm_move;
+    QSharedMemory shm_mobile_pose;
+    QSharedMemory shm_mobile_status;
+    QSharedMemory shm_move_success_check;
 
     CMD get_cmd();
     STATUS get_status();
@@ -194,7 +278,10 @@ public:
     IMG get_cam0();
     IMG get_cam1();
     POSE get_move_where(); //어디로 갈지 유진 로봇으로 부터 받는 코드.
-
+    ROBOT_COMMAND get_mobile_status();
+    //robot_status 1 = pause
+    //robot_status 2 = resume
+    //robot_status 3 = stop
 
     void set_cmd(IPC::CMD val);
     void set_status(IPC::STATUS val);
@@ -203,7 +290,10 @@ public:
     void set_obs(IPC::MAP val);
     void set_cam0(IPC::IMG val);
     void set_cam1(IPC::IMG val);
+
     void set_move_where(IPC::POSE val);
+    void set_mobile_pos(IPC::MOBILE_POSE val); //현재 위치 유진 로봇한테 알려주는 코드.
+    void set_mobile_success_check(IPC::SUCCESS_CHECK val); //성공여부 알려주는 코드.
 
 signals:
 

@@ -15,10 +15,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-# OpenCV library all
-INCLUDEPATH += /usr/include/opencv4/
-LIBS += -L/usr/lib/x86_64-linux-gnu/
-LIBS += -lopencv_core \
+# Libraries setting (for x86_64)
+#contains(QT_ARCH, x86_64){
+
+    # OpenCV library all
+    INCLUDEPATH += /usr/include/opencv4/
+    LIBS += -L/usr/lib/x86_64-linux-gnu/
+    LIBS += -lopencv_core \
         -lopencv_highgui \
         -lopencv_imgcodecs \
         -lopencv_imgproc \
@@ -33,11 +36,16 @@ LIBS += -lopencv_core \
         -lopencv_ximgproc
 
 SOURCES += \
+    cv_to_qt.cpp \
+    ipc.cpp \
     main.cpp \
     mainwindow.cpp \
     websocket.cpp
 
 HEADERS += \
+    cv_to_qt.h \
+    global_defines.h \
+    ipc.h \
     mainwindow.h \
     websocket.h
 
@@ -49,6 +57,15 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+    # Eigen and Sophus library
+    INCLUDEPATH += /usr/include/eigen3/
+    INCLUDEPATH += /usr/local/include/sophus/
+
+
+# TBB
+LIBS += -L/usr/lib/x86_64-linux-gnu/
+LIBS += -ltbb
 
 DISTFILES += \
     resource/rainbow.png \

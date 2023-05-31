@@ -17,6 +17,9 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/types_c.h>
 
+// 통신을 위해 만든 헤더 삽입.
+#include "ipc.h"
+
 class websocket : public QObject
 {
     Q_OBJECT
@@ -24,7 +27,12 @@ public:
     ~websocket();
     explicit websocket(QObject *parent = nullptr);
 
+    // ipc
+    IPC ipc;
+
     bool msg = false;
+
+    bool charging_status =false;
 
     QString uuid;
 
@@ -40,6 +48,31 @@ public:
 
     QString config_path;
 
+    uint32_t last_status_tick = 0;
+
+    uint32_t last_sucess_tick = 0;
+
+    bool connected;
+
+//    QTimer timer;
+
+//    struct MOBILE_POSE
+//    {
+//        float x,y,theta;
+//    };
+
+//    struct MOBILE_STATUS
+//    {
+        float status_charge,status_power;
+//    };
+
+      float goal_x[512];
+      float goal_y[512];
+
+      double x=0,y=0,theta=0;//for yujin
+
+//      double x,y,theta;//for yujin
+
 signals:
     void msgSignal(bool msg);
 
@@ -47,6 +80,7 @@ signals:
 
     void msgSendSignal(QString message);
 
+    void check_robot_connected(bool connected);
 
 
 public slots:
@@ -69,6 +103,14 @@ public slots:
 
     void send_img_package(QString map_config_path,int image_file_size,QString signature,QString fileName);
 
+//    void GetSignal(float x, float y, float theta,float charge, float power);
+     void timerLoop();
+
+//     void CMD_RESULT(QWebSocket *client_socket);
+
+
+
+
 private:
 
     QTimer  *timer;
@@ -90,6 +132,7 @@ private:
 
 
     void sendAck(QString uuid);
+    void CMD_RESULT(QString result);
 };
 
 

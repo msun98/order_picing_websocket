@@ -2,7 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <filesystem>
-
+#include "ipc.h"
 
 /*
 MainWindow::MainWindow(QWidget *parent) :
@@ -13,7 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 --------------------------------------------
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent)￣
     , ui(new Ui::MainWindow)//new Ui::MainWindow는 mainwindow 클래스에서 호출되지 않고 Ui::MainWindow에 선언된 setupUI메소드를 사용함.)
 
 같은 내용임.
@@ -22,14 +22,20 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+//    , ipc(this)
 {
+//    ipc = new QSharedMemory();
+
     web.open();
+//    IPC ipc;
 
 //    connect(&web, SIGNAL(onNewConnection()), this, SLOT(showUI_msg()));
     connect(&web, SIGNAL(msgSignal(bool)), this, SLOT(showUI_msg(bool)));
     connect(&web, SIGNAL(msgReciveSignal(QString)), this, SLOT(showUI_recive_msg(QString)));
     connect(&web, SIGNAL(msgSendSignal(QString)), this, SLOT(showUI_send_msg(QString)));
 
+    //for robot status check
+    connect(&web, SIGNAL(check_robot_connected(bool)), this, SLOT(check_robot_connected(bool)));
     ui->setupUi(this);
 }
 
@@ -52,6 +58,19 @@ void MainWindow::showUI_msg(bool msg)
     }
 }
 
+void MainWindow::check_robot_connected(bool connected)
+{
+    if (connected==true)
+    {
+        ui->la_connection_check->setText(QString("ROBOT Connected.."));
+    }
+
+    else
+    {
+        ui->la_connection_check->setText(QString("ROBOT Disconnect.."));
+    }
+}
+
 void MainWindow::showUI_recive_msg(QString message)
 {
      ui->te_msg->append(QString(message));
@@ -69,5 +88,4 @@ void MainWindow::showUI_send_msg(QString message)
 //     ui->te_msg->append("");
 
 }
-
 

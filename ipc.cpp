@@ -10,7 +10,12 @@ IPC::IPC(QObject *parent)
     , shm_obs("slamnav_obs")
     , shm_cam0("slamnav_cam0")
     , shm_cam1("slamnav_cam1")
+
     , shm_move("slamnav_move")
+    , shm_mobile_pose("slamnav_pose")
+    , shm_mobile_status("slamnav_mobile_status")
+    , shm_move_success_check("slamnav_move_success_check")
+
 {
     // msg tick clear, check for new data
     tick = 0;
@@ -89,6 +94,7 @@ IPC::IPC(QObject *parent)
     {
         printf("create shared memory, key: slamnav_cam1, size: %ld\n", sizeof(IPC::IMG));
     }
+
     if (!shm_move.create(sizeof(IPC::POSE), QSharedMemory::ReadWrite) && shm_move.error() == QSharedMemory::AlreadyExists)
     {
         printf("attach shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
@@ -97,6 +103,36 @@ IPC::IPC(QObject *parent)
     else
     {
         printf("create shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
+    }
+
+    if (!shm_mobile_pose.create(sizeof(IPC::MOBILE_POSE), QSharedMemory::ReadWrite) && shm_mobile_pose.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: shm_mobile_pose, size: %ld\n", sizeof(IPC::MOBILE_POSE));
+        shm_mobile_pose.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: shm_mobile_pose, size: %ld\n", sizeof(IPC::MOBILE_POSE));
+    }
+
+    if (!shm_mobile_status.create(sizeof(IPC::ROBOT_COMMAND), QSharedMemory::ReadWrite) && shm_mobile_status.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: shm_mobile_status, size: %ld\n", sizeof(IPC::ROBOT_COMMAND));
+        shm_mobile_status.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: shm_mobile_status, size: %ld\n", sizeof(IPC::ROBOT_COMMAND));
+    }
+
+    if (!shm_move_success_check.create(sizeof(IPC::SUCCESS_CHECK), QSharedMemory::ReadWrite) && shm_move_success_check.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: shm_move_success_check, size: %ld\n", sizeof(IPC::SUCCESS_CHECK));
+        shm_move_success_check.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: shm_move_success_check, size: %ld\n", sizeof(IPC::SUCCESS_CHECK));
     }
 
 
@@ -142,6 +178,21 @@ IPC::~IPC()//프로그램 종료시 연결 해제
     if(shm_move.detach())
     {
         printf("detach shared memory, key: shm_move\n");
+    }
+
+    if(shm_mobile_pose.detach())
+    {
+        printf("detach shared memory, key: shm_mobile_pose\n");
+    }
+
+    if(shm_mobile_status.detach())
+    {
+        printf("detach shared memory, key: shm_mobile_status\n");
+    }
+
+    if(shm_move_success_check.detach())
+    {
+        printf("detach shared memory, key: shm_mobile_status\n");
     }
 }
 
@@ -233,6 +284,18 @@ IPC::POSE IPC::get_move_where()
     return res;
 }
 
+IPC::ROBOT_COMMAND IPC::get_mobile_status()
+{
+    IPC::ROBOT_COMMAND res;
+
+    shm_mobile_status.lock();
+    memcpy(&res, (char*)shm_mobile_status.constData(), sizeof(IPC::ROBOT_COMMAND));
+    shm_mobile_status.unlock();
+
+    return res;
+}
+
+
 void IPC::set_cmd(IPC::CMD val)
 {
     shm_cmd.lock();
@@ -298,3 +361,20 @@ void IPC::set_move_where(IPC::POSE val)
     shm_move.unlock();
 }
 
+void IPC::set_mobile_pos(IPC::MOBILE_POSE val) //현재 위치 유진 로봇한테 주는 코드.
+{
+    shm_mobile_pose.lock();
+    val.tick = ++tick;
+    memcpy((char*)shm_mobile_pose.data(), &val, sizeof(IPC::MOBILE_POSE));
+    //    printf("%f",x)
+    shm_mobile_pose.unlock();
+}
+
+void IPC::set_mobile_success_check(IPC::SUCCESS_CHECK val)
+{
+    shm_move_success_check.lock();
+    val.tick = ++tick;
+    memcpy((char*)shm_move_success_check.data(), &val, sizeof(IPC::SUCCESS_CHECK));
+    //    printf("%f",x)
+    shm_move_success_check.unlock();
+}
