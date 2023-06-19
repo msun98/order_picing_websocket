@@ -11,10 +11,15 @@ IPC::IPC(QObject *parent)
     , shm_cam0("slamnav_cam0")
     , shm_cam1("slamnav_cam1")
 
+    , shm_websocketON("yujin_websocketON")
+
     , shm_move("slamnav_move")
     , shm_mobile_pose("slamnav_pose")
     , shm_mobile_status("slamnav_mobile_status")
     , shm_move_success_check("slamnav_move_success_check")
+
+    , shm_yujin_json("yujin_json")
+    , shm_rainbow_json("rainbow_json")
 
 {
     // msg tick clear, check for new data
@@ -23,6 +28,7 @@ IPC::IPC(QObject *parent)
     // create or attach
     //프로그램 오픈시 공유 메모리 생성, 쉐어드 메모리 오픈되어있는지 확인.
     if (!shm_cmd.create(sizeof(IPC::CMD), QSharedMemory::ReadWrite) && shm_cmd.error() == QSharedMemory::AlreadyExists)
+
     //공유 메모리 세그먼트 생성. 공유 메모리 세그먼트가 이미 존재하는 경우 false 반환
     // 공유 메모리가 만들어지지 않았고 쉐어드 메모리가 이미 존재하고 있다고 하면
     {
@@ -94,7 +100,6 @@ IPC::IPC(QObject *parent)
     {
         printf("create shared memory, key: slamnav_cam1, size: %ld\n", sizeof(IPC::IMG));
     }
-
     if (!shm_move.create(sizeof(IPC::POSE), QSharedMemory::ReadWrite) && shm_move.error() == QSharedMemory::AlreadyExists)
     {
         printf("attach shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
@@ -104,15 +109,14 @@ IPC::IPC(QObject *parent)
     {
         printf("create shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
     }
-
     if (!shm_mobile_pose.create(sizeof(IPC::MOBILE_POSE), QSharedMemory::ReadWrite) && shm_mobile_pose.error() == QSharedMemory::AlreadyExists)
     {
-        printf("attach shared memory, key: shm_mobile_pose, size: %ld\n", sizeof(IPC::MOBILE_POSE));
+        printf("attach shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
         shm_mobile_pose.attach();
     }
     else
     {
-        printf("create shared memory, key: shm_mobile_pose, size: %ld\n", sizeof(IPC::MOBILE_POSE));
+        printf("create shared memory, key: shm_move, size: %ld\n", sizeof(IPC::POSE));
     }
 
     if (!shm_mobile_status.create(sizeof(IPC::ROBOT_COMMAND), QSharedMemory::ReadWrite) && shm_mobile_status.error() == QSharedMemory::AlreadyExists)
@@ -135,7 +139,38 @@ IPC::IPC(QObject *parent)
         printf("create shared memory, key: shm_move_success_check, size: %ld\n", sizeof(IPC::SUCCESS_CHECK));
     }
 
+    //for check websocket
+    if (!shm_websocketON.create(sizeof(IPC::SUCCESS_CHECK), QSharedMemory::ReadWrite) && shm_websocketON.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: shm_websocketON, size: %ld\n", sizeof(IPC::SUCCESS_CHECK));
+        shm_websocketON.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: shm_websocketON, size: %ld\n", sizeof(IPC::SUCCESS_CHECK));
+    }
 
+    //for check websocket yujin_json
+    if (!shm_yujin_json.create(sizeof(IPC::WEB_commend), QSharedMemory::ReadWrite) && shm_yujin_json.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: shm_websocketON, size: %ld\n", sizeof(IPC::WEB_commend));
+        shm_yujin_json.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: shm_websocketON, size: %ld\n", sizeof(IPC::WEB_commend));
+    }
+
+    //for check websocket rainbow_json
+    if (!shm_rainbow_json.create(sizeof(IPC::WEB_commend), QSharedMemory::ReadWrite) && shm_rainbow_json.error() == QSharedMemory::AlreadyExists)
+    {
+        printf("attach shared memory, key: rainbow_json, size: %ld\n", sizeof(IPC::WEB_commend));
+        shm_rainbow_json.attach();
+    }
+    else
+    {
+        printf("create shared memory, key: rainbow_json, size: %ld\n", sizeof(IPC::WEB_commend));
+    }
 }
 
 IPC::~IPC()//프로그램 종료시 연결 해제
@@ -193,6 +228,21 @@ IPC::~IPC()//프로그램 종료시 연결 해제
     if(shm_move_success_check.detach())
     {
         printf("detach shared memory, key: shm_mobile_status\n");
+    }
+
+    if(shm_websocketON.detach())
+    {
+        printf("detach shared memory, key: shm_websocketON\n");
+    }
+
+    if(shm_yujin_json.detach())
+    {
+        printf("detach shared memory, key: shm_websocketON\n");
+    }
+
+    if(shm_rainbow_json.detach())
+    {
+        printf("detach shared memory, key: yujin_json\n");
     }
 }
 
@@ -284,17 +334,27 @@ IPC::POSE IPC::get_move_where()
     return res;
 }
 
-IPC::ROBOT_COMMAND IPC::get_mobile_status()
+IPC::MOBILE_POSE IPC::get_mobile_pos()
 {
-    IPC::ROBOT_COMMAND res;
+    IPC::MOBILE_POSE res;
 
-    shm_mobile_status.lock();
-    memcpy(&res, (char*)shm_mobile_status.constData(), sizeof(IPC::ROBOT_COMMAND));
-    shm_mobile_status.unlock();
+    shm_mobile_pose.lock();
+    memcpy(&res, (char*)shm_mobile_pose.constData(), sizeof(IPC::MOBILE_POSE));
+    shm_mobile_pose.unlock();
 
     return res;
 }
 
+IPC::SUCCESS_CHECK IPC::get_mobile_success_check()
+{
+    IPC::SUCCESS_CHECK res;
+
+    shm_move_success_check.lock();
+    memcpy(&res, (char*)shm_move_success_check.constData(), sizeof(IPC::SUCCESS_CHECK));
+    shm_move_success_check.unlock();
+
+    return res;
+}
 
 void IPC::set_cmd(IPC::CMD val)
 {
@@ -361,20 +421,40 @@ void IPC::set_move_where(IPC::POSE val)
     shm_move.unlock();
 }
 
-void IPC::set_mobile_pos(IPC::MOBILE_POSE val) //현재 위치 유진 로봇한테 주는 코드.
+void IPC::set_mobile_status(IPC::ROBOT_COMMAND val)
 {
-    shm_mobile_pose.lock();
+    shm_mobile_status.lock();
     val.tick = ++tick;
-    memcpy((char*)shm_mobile_pose.data(), &val, sizeof(IPC::MOBILE_POSE));
-    //    printf("%f",x)
-    shm_mobile_pose.unlock();
+    memcpy((char*)shm_mobile_status.data(), &val, sizeof(IPC::ROBOT_COMMAND));
+//    printf("%f",x)
+    shm_mobile_status.unlock();
 }
 
-void IPC::set_mobile_success_check(IPC::SUCCESS_CHECK val)
+void IPC::set_websocketON(IPC::SUCCESS_CHECK val)
 {
-    shm_move_success_check.lock();
+    shm_websocketON.lock();
     val.tick = ++tick;
-    memcpy((char*)shm_move_success_check.data(), &val, sizeof(IPC::SUCCESS_CHECK));
-    //    printf("%f",x)
-    shm_move_success_check.unlock();
+    memcpy((char*)shm_websocketON.data(), &val, sizeof(IPC::SUCCESS_CHECK));
+//    printf("%f",x)
+    shm_websocketON.unlock();
 }
+
+void IPC::set_Yujin_CMD(IPC::WEB_commend val)
+{
+    shm_yujin_json.lock();
+    val.tick = ++tick;
+    memcpy((char*)shm_yujin_json.data(), &val, sizeof(IPC::WEB_commend));
+//    printf("%f",x)
+    shm_yujin_json.unlock();
+}
+
+void IPC::set_Rainbow_CMD(IPC::WEB_commend val)
+{
+    shm_rainbow_json.lock();
+    val.tick = ++tick;
+    memcpy((char*)shm_rainbow_json.data(), &val, sizeof(IPC::WEB_commend));
+//    printf("%f",x)
+    shm_rainbow_json.unlock();
+}
+
+

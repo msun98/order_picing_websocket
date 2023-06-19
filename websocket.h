@@ -27,14 +27,12 @@ public:
     ~websocket();
     explicit websocket(QObject *parent = nullptr);
 
-
-
     // ipc
     IPC ipc;
 
     bool msg = false;
 
-     bool charging_status =false;
+    bool charging_status =false;
 
     QString uuid;
 
@@ -52,7 +50,11 @@ public:
 
     uint32_t last_status_tick = 0;
 
+    uint32_t last_sucess_tick = 0;
+
     bool connected;
+
+//    QString str_json;
 
 //    QTimer timer;
 
@@ -106,6 +108,10 @@ public slots:
 //    void GetSignal(float x, float y, float theta,float charge, float power);
      void timerLoop();
 
+//     void CMD_RESULT(QWebSocket *client_socket);
+
+
+
 
 private:
 
@@ -128,6 +134,7 @@ private:
 
 
     void sendAck(QString uuid);
+    void CMD_RESULT(QString result);
 };
 
 

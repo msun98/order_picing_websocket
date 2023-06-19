@@ -23,7 +23,6 @@
 #include "opencv2/flann/miniflann.hpp"
 #include "cv_to_qt.h"
 
-
 class IPC : public QObject
 {
     Q_OBJECT
@@ -47,6 +46,7 @@ public:
     };
 
     struct STATUS
+            // 구조체 변수 정의함과 동시에 생성자에 의해서 특정값으로 초기화됨
     {
         uint32_t   tick = 0;
         int8_t     connection_m0 = 0;
@@ -78,7 +78,7 @@ public:
         STATUS()
         {
         }
-        STATUS(const STATUS& p)//const &는 읽기 전용, 참조자의 특성상 매개변수를 변경하면 원래 넘겨받은 데이터까지 변경될 가능성이 있으므로 이를 방지하기 위해 const 같이 사용
+        STATUS(const STATUS& p)
         {
             tick = p.tick;
             connection_m0 = p.connection_m0;
@@ -113,7 +113,7 @@ public:
     {
         uint32_t tick = 0;
         int32_t num = 0;
-        float x[512] = {0,};
+        float x[512] = {0,};//모든 배열의 요소를 0으로 초기화(only 0만 가느)
         float y[512] = {0,};
 
         PATH()
@@ -227,6 +227,7 @@ public:
         {
             tick = p.tick;
             robot_status = p.robot_status;
+            //robot_status 0 = move
             //robot_status 1 = pause
             //robot_status 2 = resume
             //robot_status 3 = stop
@@ -237,8 +238,8 @@ public:
     {
         uint32_t tick = 0;
         bool check = 0;
-        //success_check = 0 -> success
-        //success_check = 1 -> fail
+        //success_check = 1 -> success
+        //success_check = 0 -> fail
 
         SUCCESS_CHECK()
         {
@@ -246,10 +247,49 @@ public:
         }
         SUCCESS_CHECK(const SUCCESS_CHECK& p)
         {
-         tick = p.tick;
-         check = p.check;
+            tick = p.tick;
+            check = p.check;
         }
     };
+
+    struct WEB_commend
+    {
+        uint32_t tick = 0;
+        uint8_t json_cmd[1000] = {0,};
+        uint32_t json_cmd_size = 0;
+        uint8_t json_uuid[30]= {0,};
+        uint32_t json_uuid_size = 0;
+
+        WEB_commend()
+        {
+
+        }
+        WEB_commend(const WEB_commend& p)
+        {
+            tick = p.tick;
+            memcpy(json_cmd, p.json_cmd, 1000);
+            json_cmd_size = p.json_cmd_size;
+            memcpy(json_uuid, p.json_uuid, 30);
+            json_uuid_size = p.json_uuid_size;
+        }
+    };
+
+
+//    struct webonFLAG
+//    {
+//        uint32_t tick = 0;
+//        bool flag = 0;
+
+//        webonFLAG()
+//        {
+
+//        }
+//        webonFLAG(const webonFLAG& p)
+//        {
+//            tick = p.tick;
+//            flag = p.flag;
+//        }
+//    };
 
 public:
     explicit IPC(QObject *parent = nullptr);
@@ -265,10 +305,16 @@ public:
     QSharedMemory shm_cam0;
     QSharedMemory shm_cam1;
 
+    //for check websocket on
+    QSharedMemory shm_websocketON;
+
     QSharedMemory shm_move;
     QSharedMemory shm_mobile_pose;
     QSharedMemory shm_mobile_status;
     QSharedMemory shm_move_success_check;
+
+    QSharedMemory shm_yujin_json;
+    QSharedMemory shm_rainbow_json;
 
     CMD get_cmd();
     STATUS get_status();
@@ -277,11 +323,10 @@ public:
     MAP get_obs();
     IMG get_cam0();
     IMG get_cam1();
-    POSE get_move_where(); //어디로 갈지 유진 로봇으로 부터 받는 코드.
-    ROBOT_COMMAND get_mobile_status();
-    //robot_status 1 = pause
-    //robot_status 2 = resume
-    //robot_status 3 = stop
+
+    POSE get_move_where(); // 어디로 갈지 유진 로봇으로 부터 받는 코드.
+    MOBILE_POSE get_mobile_pos(); //move, pause, resume, stop
+    SUCCESS_CHECK get_mobile_success_check();//성공여부 확인을 위해 생성한 코드.
 
     void set_cmd(IPC::CMD val);
     void set_status(IPC::STATUS val);
@@ -290,10 +335,13 @@ public:
     void set_obs(IPC::MAP val);
     void set_cam0(IPC::IMG val);
     void set_cam1(IPC::IMG val);
-
     void set_move_where(IPC::POSE val);
-    void set_mobile_pos(IPC::MOBILE_POSE val); //현재 위치 유진 로봇한테 알려주는 코드.
-    void set_mobile_success_check(IPC::SUCCESS_CHECK val); //성공여부 알려주는 코드.
+    void set_mobile_status(IPC::ROBOT_COMMAND val);
+
+    void set_websocketON(IPC::SUCCESS_CHECK val);// 통합 프로그램에 플래그 전달하기 위함.
+    void set_Yujin_CMD(IPC::WEB_commend val);// 유진로봇 명령 통합 ui에 전달하기 위함.
+    void set_Rainbow_CMD(IPC::WEB_commend val);// 내가 보낸 메시지 통합 ui에전달하기 위함.
+
 
 signals:
 

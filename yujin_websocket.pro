@@ -58,6 +58,9 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
+    # Eigen and Sophus library
+    INCLUDEPATH += /usr/include/eigen3/
+    INCLUDEPATH += /usr/local/include/sophus/
 
 
 # TBB

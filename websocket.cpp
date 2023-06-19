@@ -14,7 +14,7 @@ typedef union{
 
 websocket::websocket(QObject *parent) : QObject(parent)
 {
-//    connect(&MainWindow, SIGNAL(msgSignal(bool)), this, SLOT(GetSignal(float, float,float,float,float,float)));
+    //    connect(&MainWindow, SIGNAL(msgSignal(bool)), this, SLOT(GetSignal(float, float,float,float,float,float)));
 }
 
 websocket::~websocket()
@@ -26,19 +26,19 @@ websocket::~websocket()
 void websocket::open()
 {
     server = new QWebSocketServer("rb_websocket", QWebSocketServer::NonSecureMode, this);
-    if(server->listen(QHostAddress::Any, 1111)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출
+    if(server->listen(QHostAddress::Any, 28081)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출(yujin -> client, rainbow -> server)
     {
         connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
     }
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-//    timer->start(100);
+    //    timer->start(100);
 
     // for ipc (robot status check)
     connect(timer, SIGNAL(timeout()), this, SLOT(timerLoop()));
 //    timer.start(100);
-     timer->start(100);
+         timer->start(100);
 }
 
 void websocket::onNewConnection(){
@@ -74,49 +74,125 @@ void websocket::onClosed()
 
 }
 
+void websocket::CMD_RESULT(QString result)
+{
+    for(int i=0; i<clients.size(); i++)
+    {
+        QWebSocket *pSocket = clients[i];
+        //        sendNotice(pSocket);
+        QJsonObject json;
+        json["msg_type"] = "cmd_result";
+        json["result"] = result;
+        json["data"] = "dddd";
+
+        qDebug()<<"result : "<<result;
+
+        if (result == "failure")
+        {
+            QJsonObject json_error_info;
+            json_error_info["error_code"] = "dddd";
+            json_error_info["description"] = "dddd";
+            json_error_info["debug_msg"] = "dddd";
+            json["error"] = json_error_info;
+        }
+
+        json["uuid"] = uuid;
+
+        QJsonDocument doc_json(json);
+        QString str_json(doc_json.toJson(QJsonDocument::Indented));
+        emit msgSendSignal(str_json);
+        pSocket->sendTextMessage(str_json);
+
+        std::string rainbow_cmd(str_json.toStdString());
+        IPC::WEB_commend RB_CMD;
+        memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
+        RB_CMD.json_cmd_size = rainbow_cmd.size();
+        std::cout<<RB_CMD.json_cmd<<std::endl;
+
+        std::string uuid_send(uuid.toStdString());
+//            std::cout<<uuid_send<<std::endl;
+//            yj_CMD.uuid=uuid_send;
+        memcpy((uint8_t*)RB_CMD.json_uuid, uuid_send.data(), 30);
+
+        RB_CMD.json_uuid_size = uuid_send.size();
+//            std::cout<<RB_CMD.json_uuid_size<<std::endl;
+
+        ipc.set_Rainbow_CMD(RB_CMD); //통합 ui에 유진로봇 명령을 넘기기 위한 코드.
+
+    }
+
+    //    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
+
+}
+
 void websocket::timerLoop()
 {
+   //    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
+    //    sendNotice(pSocket);
+
     // status
     IPC::STATUS status = ipc.get_status();
     IPC::PATH path = ipc.get_path();
     IPC::POSE pose;
 
+    IPC::SUCCESS_CHECK sucess = ipc.get_mobile_success_check();
+    if(sucess.tick != last_sucess_tick) //틱으로 로봇 상태 갱신되는지 확인.
+    {
+        //        QString check;
+        // 로봇 이동 성공 여부 체크.
+        if(sucess.check == 1)
+        {
+            //            check = "success";
+            qDebug()<<"success";
+            qDebug()<<"dddddd"<<sucess.check;
+            CMD_RESULT("success");
+        }
+        else if(sucess.check == 0)
+        {
+            //            check = "fail";
+            qDebug()<<"fail";
+            CMD_RESULT("failure");
+        }
 
-//    MOBILE_POSE mobile_pose;
-//    MOBILE_STATUS mobile_status;
-    if(status.tick != last_status_tick)
+    }
+    last_sucess_tick = sucess.tick;
+
+
+    if(status.tick != last_status_tick) //틱으로 로봇 상태 갱신되는지 확인.
     {
         connected = true;
 
-//        ui->la_connection_check->setText("로봇과 연결되었습니다.");
+        //        ui->la_connection_check->setText("로봇과 연결되었습니다.");
         QString mobile_status_str;
 
         //get robot pose
-//        robot_purpose_x=status.robot_pose[0];
-//        robot_purpose_y=status.robot_pose[1];
-//        robot_purpose_theta=status.robot_pose[2];
+        //        robot_purpose_x=status.robot_pose[0];
+        //        robot_purpose_y=status.robot_pose[1];
+        //        robot_purpose_theta=status.robot_pose[2];
 
         //get robot battery
-        status_charge = status.status_charge; //배터리 충전중인지 판단.
-        status_power = status.status_power; //  배터리 잔량 체크(로봇에 넣어 확인.)
+        //        IPC::STATUS status = ipc.get_status();
+        //        status_charge = status.status_charge; //배터리 충전중인지 판단.
+        //        status_power = status.status_power; //  배터리 잔량 체크(로봇에 넣어 확인.)
 
         //get robot path
-        memcpy(goal_x, path.x, sizeof(float)*512);
-        memcpy(goal_y, path.y, sizeof(float)*512);
+        //        memcpy(goal_x, path.x, sizeof(float)*512);
+        //        memcpy(goal_y, path.y, sizeof(float)*512);
 
-        //get robot pose 유진로봇으로부터 받은 이동해야할 곳
-        pose.x=x;
-        pose.y=y;
-        pose.theta=theta;
+        //        //get robot pose 유진로봇으로부터 받은 이동해야할 곳
+        //        pose.x=x;
+        //        pose.y=y;
+        //        pose.theta=theta;
+
 
         ipc.set_move_where(pose);
-//        qDebug()<<"pose.x"<<x;
+        //        qDebug()<<"pose.x"<<x;
 
-//        goal_x = path.x;
-//        goal_y = path.y;
+        //        goal_x = path.x;
+        //        goal_y = path.y;
 
 
-//        emit StatusSignal(mobile_pose.x,mobile_pose.y,mobile_pose.theta,mobile_status.status_charge,mobile_status.status_power);
+        //        emit StatusSignal(mobile_pose.x,mobile_pose.y,mobile_pose.theta,mobile_status.status_charge,mobile_status.status_power);
 
 
 
@@ -131,72 +207,72 @@ void websocket::timerLoop()
                                   status.power, status.total_power,x,y,theta);
 
         //status 확인용
-//        ui->te_send_msg->setText(mobile_status_str);
-//        qDebug()<<mobile_status_str;
-//        emit msgSendSignal(mobile_status_str);
+        //        ui->te_send_msg->setText(mobile_status_str);
+        //        qDebug()<<mobile_status_str;
+        //        emit msgSendSignal(mobile_status_str);
     }
     else
     {
         connected = false;
-//        emit msgSendSignal(mobile_status_str);
-//       ui->la_connection_check->setText("로봇과 연결이 끊겼습니다.");
+        //        emit msgSendSignal(mobile_status_str);
+        //       ui->la_connection_check->setText("로봇과 연결이 끊겼습니다.");
     }
     emit check_robot_connected(connected);
     last_status_tick = status.tick;
 
 
 
-//    // map
-//    IPC::MAP map = ipc.get_map();
-//    if(map.tick != last_map_tick)
-//    {
-//        cv::Mat map_img(1000, 1000, CV_8U, cv::Scalar(0));
-//        memcpy((uint8_t*)map_img.data, map.buf, 1000*1000);
+    //    // map
+    //    IPC::MAP map = ipc.get_map();
+    //    if(map.tick != last_map_tick)
+    //    {
+    //        cv::Mat map_img(1000, 1000, CV_8U, cv::Scalar(0));
+    //        memcpy((uint8_t*)map_img.data, map.buf, 1000*1000);
 
-//        ui->lb_Screen1->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(map_img)));
-//        ui->lb_Screen1->setScaledContents(true);
-//        ui->lb_Screen1->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-//    }
-//    last_map_tick = map.tick;
+    //        ui->lb_Screen1->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(map_img)));
+    //        ui->lb_Screen1->setScaledContents(true);
+    //        ui->lb_Screen1->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    //    }
+    //    last_map_tick = map.tick;
 
-//    // obstacle map
-//    IPC::MAP obs = ipc.get_obs();
-//    if(obs.tick != last_obs_tick)
-//    {
-//        cv::Mat obs_img(1000, 1000, CV_8U, cv::Scalar(0));
-//        memcpy((uint8_t*)obs_img.data, obs.buf, 1000*1000);
+    //    // obstacle map
+    //    IPC::MAP obs = ipc.get_obs();
+    //    if(obs.tick != last_obs_tick)
+    //    {
+    //        cv::Mat obs_img(1000, 1000, CV_8U, cv::Scalar(0));
+    //        memcpy((uint8_t*)obs_img.data, obs.buf, 1000*1000);
 
-//        ui->lb_Screen2->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(obs_img)));
-//        ui->lb_Screen2->setScaledContents(true);
-//        ui->lb_Screen2->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-//    }
-//    last_obs_tick = obs.tick;
+    //        ui->lb_Screen2->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(obs_img)));
+    //        ui->lb_Screen2->setScaledContents(true);
+    //        ui->lb_Screen2->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    //    }
+    //    last_obs_tick = obs.tick;
 
-//    // cam0
-//    IPC::IMG cam0 = ipc.get_cam0();
-//    if(cam0.tick != last_cam0_tick)
-//    {
-//        cv::Mat cam0_img(270, 480, CV_8U, cv::Scalar(0));
-//        memcpy((uint8_t*)cam0_img.data, cam0.buf, 270*480);
+    //    // cam0
+    //    IPC::IMG cam0 = ipc.get_cam0();
+    //    if(cam0.tick != last_cam0_tick)
+    //    {
+    //        cv::Mat cam0_img(270, 480, CV_8U, cv::Scalar(0));
+    //        memcpy((uint8_t*)cam0_img.data, cam0.buf, 270*480);
 
-//        ui->lb_Screen3->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(cam0_img)));
-//        ui->lb_Screen3->setScaledContents(true);
-//        ui->lb_Screen3->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-//    }
-//    last_cam0_tick = cam0.tick;
+    //        ui->lb_Screen3->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(cam0_img)));
+    //        ui->lb_Screen3->setScaledContents(true);
+    //        ui->lb_Screen3->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    //    }
+    //    last_cam0_tick = cam0.tick;
 
-//    // cam1
-//    IPC::IMG cam1 = ipc.get_cam1();
-//    if(cam1.tick != last_cam1_tick)
-//    {
-//        cv::Mat cam1_img(270, 480, CV_8U, cv::Scalar(0));
-//        memcpy((uint8_t*)cam1_img.data, cam1.buf, 270*480);
+    //    // cam1
+    //    IPC::IMG cam1 = ipc.get_cam1();
+    //    if(cam1.tick != last_cam1_tick)
+    //    {
+    //        cv::Mat cam1_img(270, 480, CV_8U, cv::Scalar(0));
+    //        memcpy((uint8_t*)cam1_img.data, cam1.buf, 270*480);
 
-//        ui->lb_Screen4->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(cam1_img)));
-//        ui->lb_Screen4->setScaledContents(true);
-//        ui->lb_Screen4->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-//    }
-//    last_cam1_tick = cam1.tick;
+    //        ui->lb_Screen4->setPixmap(QPixmap::fromImage(mat_to_qimage_cpy(cam1_img)));
+    //        ui->lb_Screen4->setScaledContents(true);
+    //        ui->lb_Screen4->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    //    }
+    //    last_cam1_tick = cam1.tick;
 }
 
 void websocket::onTimeout()
@@ -224,15 +300,19 @@ void websocket::onBinaryMessageReceived(QByteArray message){
     }
 }
 
-//void GetSignal(float x, float y, float theta,float charge, float power)
-//{
-//    qDebug<<"x : "<<x;
-//}
-
 void websocket::onTextMessageReceived(QString message) //comand msg
 {
     QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
     emit msgReciveSignal(message);// ui를 통해 메시지를 확인하기 위함.
+    qDebug()<<message;
+
+    //for toss massage integrated UI
+    std::string yujin_cmd(message.toStdString());
+    IPC::WEB_commend yj_CMD;
+    memcpy((uint8_t*)yj_CMD.json_cmd, yujin_cmd.data(), 1000);
+    yj_CMD.json_cmd_size = yujin_cmd.size();
+    std::cout<<yj_CMD.json_cmd_size<<std::endl;
+
 
     if(pClient)
     {
@@ -247,12 +327,26 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             QString action = json["do"].toString();
             QJsonObject params = json["params"].toObject();
             uuid = json["uuid"].toString();
+
             QJsonObject error_info;
             sendAck(uuid);
+            std::string uuid_send(uuid.toStdString());
+//            std::cout<<uuid_send<<std::endl;
+//            yj_CMD.uuid=uuid_send;
+            memcpy((uint8_t*)yj_CMD.json_uuid, uuid_send.data(), 30);
+
+            yj_CMD.json_uuid_size = uuid_send.size();
+//            std::cout<<yj_CMD.json_uuid_size<<std::endl;
+
+            ipc.set_Yujin_CMD(yj_CMD); //통합 ui에 유진로봇 명령을 넘기기 위한 코드.
 
             if(action == "move")
             {
                 //4.1 Move
+                IPC::POSE pose;
+                IPC::ROBOT_COMMAND robot_command;
+                robot_command.robot_status = 0;
+                ipc.set_mobile_status(robot_command);
                 QJsonObject tempDest = params["dest"].toObject();
                 //                QString mm = QJsonDocument(tempDest).toJson(QJsonDocument::Compact);
                 //                qDebug()<<mm;
@@ -260,6 +354,14 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 x = tempDest["x"].toDouble();
                 y = tempDest["y"].toDouble();
                 theta = tempDest["theta"].toDouble();
+
+                pose.x=x;
+                pose.y=y;
+                pose.theta=theta*180/3.14; //유진로봇에서는 라디안으로 정보를 넘김.
+
+                ipc.set_move_where(pose);
+
+
 
                 qDebug()<<"x :"<<x<<",y :"<<y<<",theta :"<<theta;
                 //                pMP->MoveOmron(x,y,theta);
@@ -281,6 +383,11 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             {
                 //4.4 Pause
                 //robot에 Pause 명령줘야함.
+                IPC::ROBOT_COMMAND robot_command;
+                robot_command.robot_status = 1;
+                qDebug()<<robot_command.robot_status;
+                ipc.set_mobile_status(robot_command);
+
                 qDebug()<<"Pause";
 
                 //                qDebug()<<"stop";
@@ -291,6 +398,11 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             else if(action == "resume")
             {
                 //4.5 Resume
+                IPC::ROBOT_COMMAND robot_command;
+                robot_command.robot_status = 2;
+                qDebug()<<robot_command.robot_status;
+                ipc.set_mobile_status(robot_command);
+
                 qDebug()<<"Resume";
                 //robot에 stop 명령줘야함.
                 //                pClient->sendTextMessage("stop");
@@ -300,6 +412,11 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             else if(action == "stop")
             {
                 //4.6 Stop
+                IPC::ROBOT_COMMAND robot_command;
+                robot_command.robot_status = 3;
+                qDebug()<<robot_command.robot_status;
+                ipc.set_mobile_status(robot_command);
+
                 qDebug()<<"stop";
                 //robot에 stop 명령줘야함.
                 //                pClient->sendTextMessage("stop");
@@ -506,7 +623,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                     if (params["data_type"].toString() == "map_image_png")
                     {
                         //for get map name
-                        map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                        map_config_path = QDir::homePath()+"/maps/"+map_id+"/changed_map.png";
                         //                         }
                     }
                     else if(params["data_type"].toString() == "map_package")
@@ -563,7 +680,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                             //for get map name
 
                             qDebug()<<"map_id : "<<map_id;
-                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/changed_map.png";
                             qDebug()<<"map_config_path :"<<map_config_path;
                             fileName = map_id;
                             json_data["map_id"] = map_id;
@@ -607,11 +724,17 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             else if(action == "set_map_data")
             {
                 //4.11 Set Map Data
-            }
+           ￣ }
 
             else if(action == "get_robot_info")
             {
                 //4.12 Get robot info
+
+                // status
+                IPC::MOBILE_POSE mobile_pose = ipc.get_mobile_pos();
+                IPC::STATUS status = ipc.get_status();
+                //                status_charge = status.status_charge; //배터리 충전중인지 판단.
+                //                status_power = status.status_power; //  배터리 잔량 체크(로봇에 넣어 확인.)
 
                 QJsonObject json_out;
                 QString robot_id,map_id;
@@ -632,7 +755,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                     json_map["map_id"] = map_id;
                     json_map["map_alias"] = "1F";
-                                        json_data["map"] = json_map;
+                    json_data["map"] = json_map;
                     //                    json_data =
 
                     //                    QJsonObject json_robot_id;
@@ -645,29 +768,30 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                 // check motor init
                 // 모터 상태 입력받을 구조체 (global_defines에 있음.)
-//                MOBILE_STATUS mobile_status ;
-//                        '= ipc.get_status();
+                //                MOBILE_STATUS mobile_status ;
+                //                        '= ipc.get_status();
 
 
                 QJsonObject json_pose;
-                json_pose["x"] = 5;
-                json_pose["y"] = 5;
-                json_pose["th"] = 10;
+                json_pose["x"] = mobile_pose.pose[0];
+                json_pose["y"] = mobile_pose.pose[1];
+                double mobile_th =double(mobile_pose.pose[2]);
+                json_pose["th"] = mobile_th/180*3.14;
                 json_data["robot_pose"] = json_pose;
 
                 QJsonObject json_battery;
-//                json_battery["level"] = 90;
+                //                json_battery["level"] = 90;
 
-                json_battery["level"] = status_power;
+                json_battery["level"] = status.status_power;
 
-//                if(mobile_status.charge_state == 0)
-//                {
-//                    charging_status = false;
-//                }
-//                else
-//                {
-//                    charging_status = true;
-//                }
+                if(status.status_charge == 0)
+                {
+                    charging_status = false;
+                }
+                else
+                {
+                    charging_status = true;
+                }
                 json_battery["in_charging"] = charging_status;
                 json_data["battery"] = json_battery;
 
@@ -751,13 +875,23 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 }
 
                 QJsonDocument doc_json(json_out);
+//                QString str_json(doc_json.toJson(QJsonDocument::Indented));
                 QString str_json(doc_json.toJson(QJsonDocument::Indented));
+
+                std::string rainbow_cmd(str_json.toStdString());
+                IPC::WEB_commend RB_CMD;
+                memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
+                RB_CMD.json_cmd_size = rainbow_cmd.size();
+                std::cout<<RB_CMD.json_cmd_size<<std::endl;
 
                 emit msgSendSignal(str_json); //for debuging
                 pClient->sendTextMessage(str_json);
 
 
             }
+
+
+
         }
     }
 }
@@ -886,6 +1020,15 @@ void websocket::sendNotice(QWebSocket *client_socket){
     json["robot_state"] = "ready";
     json["navi_mode"] = "navigate";
 
+    QString config_path = QDir::homePath()+"/robot_config.ini";
+    QFileInfo config_info(config_path);
+    if(config_info.exists() && config_info.isFile())
+    {
+        QSettings settings(config_path, QSettings::IniFormat);
+        QString robot_id = settings.value("ROBOT_SW/robot_id").toString();
+        map_id = settings.value("FLOOR/map_name").toString();
+    }
+
     //    QJsonObject json_robot;
     //    json_robot["x"] = QString::number(networkThread->x);
     //    json_robot["y"] = QString::number(networkThread->y);
@@ -893,8 +1036,8 @@ void websocket::sendNotice(QWebSocket *client_socket){
     //    json["robot_pose"] = json_robot;
 
     QJsonObject json_map;
-    json_map["map_id"] = "test";
-    json_map["map_alias"] = "1F";
+    json_map["map_id"] = map_id;
+    json_map["map_alias"] = map_id;
     json["map"] = json_map;
 
     //    QJsonObject json_battery;
