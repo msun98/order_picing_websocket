@@ -107,7 +107,7 @@ void websocket::CMD_RESULT(QString result)
         IPC::WEB_commend RB_CMD;
         memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
         RB_CMD.json_cmd_size = rainbow_cmd.size();
-        std::cout<<RB_CMD.json_cmd<<std::endl;
+//        std::cout<<RB_CMD.json_cmd<<std::endl;
 
         std::string uuid_send(uuid.toStdString());
 //            std::cout<<uuid_send<<std::endl;
@@ -144,7 +144,7 @@ void websocket::timerLoop()
         {
             //            check = "success";
             qDebug()<<"success";
-            qDebug()<<"dddddd"<<sucess.check;
+//            qDebug()<<"dddddd"<<sucess.check;
             CMD_RESULT("success");
         }
         else if(sucess.check == 0)
@@ -304,14 +304,14 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 {
     QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
     emit msgReciveSignal(message);// ui를 통해 메시지를 확인하기 위함.
-    qDebug()<<message;
+//    qDebug()<<message;
 
     //for toss massage integrated UI
     std::string yujin_cmd(message.toStdString());
     IPC::WEB_commend yj_CMD;
     memcpy((uint8_t*)yj_CMD.json_cmd, yujin_cmd.data(), 1000);
     yj_CMD.json_cmd_size = yujin_cmd.size();
-    std::cout<<yj_CMD.json_cmd_size<<std::endl;
+//    std::cout<<yj_CMD.json_cmd_size<<std::endl;
 
 
     if(pClient)
@@ -522,7 +522,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                     //for get map info
                     map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
-                    qDebug()<<map_config_path;
+//                    qDebug()<<map_config_path;
 
                     QFileInfo map_config_info(map_config_path);
                     if(map_config_info.exists() && map_config_info.isFile())
@@ -551,7 +551,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                     //for get map info
                     map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
-                    qDebug()<< map_config_path;
+//                    qDebug()<< map_config_path;
 
                     QFileInfo map_config_info(map_config_path);
                     if(map_config_info.exists() && map_config_info.isFile())
@@ -680,7 +680,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                             //for get map name
 
                             qDebug()<<"map_id : "<<map_id;
-                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/changed_map.png";
+                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
                             qDebug()<<"map_config_path :"<<map_config_path;
                             fileName = map_id;
                             json_data["map_id"] = map_id;
@@ -724,7 +724,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             else if(action == "set_map_data")
             {
                 //4.11 Set Map Data
-           ￣ }
+            }
 
             else if(action == "get_robot_info")
             {
@@ -827,7 +827,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 double shelve_height = params["shelve_height"].toDouble();
                 double shelve_degree = params["shelve_degree"].toDouble();
                 qDebug()<<_id;
-                std::cout<<item_id<<item_count<<shelve_height<<shelve_degree<<std::endl;
+//                std::cout<<item_id<<item_count<<shelve_height<<shelve_degree<<std::endl;
 
                 json_out["msg_type"] = "cmd_result";
                 json_out["result"] = "success";
@@ -882,7 +882,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 IPC::WEB_commend RB_CMD;
                 memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
                 RB_CMD.json_cmd_size = rainbow_cmd.size();
-                std::cout<<RB_CMD.json_cmd_size<<std::endl;
+//                std::cout<<RB_CMD.json_cmd_size<<std::endl;
 
                 emit msgSendSignal(str_json); //for debuging
                 pClient->sendTextMessage(str_json);
