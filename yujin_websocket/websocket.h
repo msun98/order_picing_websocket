@@ -54,6 +54,8 @@ public:
 
     bool connected;
 
+//    QString str_json;
+
 //    QTimer timer;
 
 //    struct MOBILE_POSE

@@ -37,11 +37,31 @@ MainWindow::MainWindow(QWidget *parent)
     //for robot status check
     connect(&web, SIGNAL(check_robot_connected(bool)), this, SLOT(check_robot_connected(bool)));
     ui->setupUi(this);
+
+    // for connected with IntegratedUI
+//    connect(&web, SIGNAL(check_robot_connected(bool)),this, SLOT(connectedIntegratedUI()));
+    IPC::SUCCESS_CHECK WebON;
+    WebON.check = true;
+    qDebug()<<"tickkkkkkkk: "<<WebON.tick;
+//    qDebug()<<"flaggggggggggg: "<<WebON.flag;
+    ipc.set_websocketON(WebON);
 }
 
 MainWindow::~MainWindow()
 {
+    IPC::SUCCESS_CHECK WebON;
+    WebON.check = false;
+    ipc.set_websocketON(WebON);
     delete ui;
+}
+
+void MainWindow::connectedIntegratedUI()
+{
+//    IPC::webonFLAG WebON;
+//    WebON.flag = true;
+//    qDebug()<<"tickkkkkkkk: "<<WebON.tick;
+//    qDebug()<<"flaggggggggggg: "<<WebON.flag;
+//    ipc.set_websocketON(WebON);
 }
 
 

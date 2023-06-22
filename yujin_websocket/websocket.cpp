@@ -26,7 +26,7 @@ websocket::~websocket()
 void websocket::open()
 {
     server = new QWebSocketServer("rb_websocket", QWebSocketServer::NonSecureMode, this);
-    if(server->listen(QHostAddress::Any, 1111)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출(yujin -> client, rainbow -> server)
+    if(server->listen(QHostAddress::Any, 28081)) //서버가 들어오는 연결을 수신하기 위해 listen을 호출(yujin -> client, rainbow -> server)
     {
         connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
     }
@@ -102,6 +102,23 @@ void websocket::CMD_RESULT(QString result)
         QString str_json(doc_json.toJson(QJsonDocument::Indented));
         emit msgSendSignal(str_json);
         pSocket->sendTextMessage(str_json);
+
+        std::string rainbow_cmd(str_json.toStdString());
+        IPC::WEB_commend RB_CMD;
+        memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
+        RB_CMD.json_cmd_size = rainbow_cmd.size();
+//        std::cout<<RB_CMD.json_cmd<<std::endl;
+
+        std::string uuid_send(uuid.toStdString());
+//            std::cout<<uuid_send<<std::endl;
+//            yj_CMD.uuid=uuid_send;
+        memcpy((uint8_t*)RB_CMD.json_uuid, uuid_send.data(), 30);
+
+        RB_CMD.json_uuid_size = uuid_send.size();
+//            std::cout<<RB_CMD.json_uuid_size<<std::endl;
+
+        ipc.set_Rainbow_CMD(RB_CMD); //통합 ui에 유진로봇 명령을 넘기기 위한 코드.
+
     }
 
     //    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
@@ -119,19 +136,18 @@ void websocket::timerLoop()
     IPC::POSE pose;
 
     IPC::SUCCESS_CHECK sucess = ipc.get_mobile_success_check();
-
     if(sucess.tick != last_sucess_tick) //틱으로 로봇 상태 갱신되는지 확인.
     {
         //        QString check;
         // 로봇 이동 성공 여부 체크.
-        if(sucess.check == 0)
+        if(sucess.check == 1)
         {
             //            check = "success";
             qDebug()<<"success";
-            qDebug()<<"dddddd"<<sucess.check;
+//            qDebug()<<"dddddd"<<sucess.check;
             CMD_RESULT("success");
         }
-        else if(sucess.check == 1)
+        else if(sucess.check == 0)
         {
             //            check = "fail";
             qDebug()<<"fail";
@@ -139,8 +155,9 @@ void websocket::timerLoop()
         }
 
     }
-
     last_sucess_tick = sucess.tick;
+
+
     if(status.tick != last_status_tick) //틱으로 로봇 상태 갱신되는지 확인.
     {
         connected = true;
@@ -287,6 +304,15 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 {
     QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
     emit msgReciveSignal(message);// ui를 통해 메시지를 확인하기 위함.
+//    qDebug()<<message;
+
+    //for toss massage integrated UI
+    std::string yujin_cmd(message.toStdString());
+    IPC::WEB_commend yj_CMD;
+    memcpy((uint8_t*)yj_CMD.json_cmd, yujin_cmd.data(), 1000);
+    yj_CMD.json_cmd_size = yujin_cmd.size();
+//    std::cout<<yj_CMD.json_cmd_size<<std::endl;
+
 
     if(pClient)
     {
@@ -301,8 +327,18 @@ void websocket::onTextMessageReceived(QString message) //comand msg
             QString action = json["do"].toString();
             QJsonObject params = json["params"].toObject();
             uuid = json["uuid"].toString();
+
             QJsonObject error_info;
             sendAck(uuid);
+            std::string uuid_send(uuid.toStdString());
+//            std::cout<<uuid_send<<std::endl;
+//            yj_CMD.uuid=uuid_send;
+            memcpy((uint8_t*)yj_CMD.json_uuid, uuid_send.data(), 30);
+
+            yj_CMD.json_uuid_size = uuid_send.size();
+//            std::cout<<yj_CMD.json_uuid_size<<std::endl;
+
+            ipc.set_Yujin_CMD(yj_CMD); //통합 ui에 유진로봇 명령을 넘기기 위한 코드.
 
             if(action == "move")
             {
@@ -324,6 +360,9 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 pose.theta=theta*180/3.14; //유진로봇에서는 라디안으로 정보를 넘김.
 
                 ipc.set_move_where(pose);
+
+
+
                 qDebug()<<"x :"<<x<<",y :"<<y<<",theta :"<<theta;
                 //                pMP->MoveOmron(x,y,theta);
             }
@@ -483,7 +522,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                     //for get map info
                     map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
-                    qDebug()<<map_config_path;
+//                    qDebug()<<map_config_path;
 
                     QFileInfo map_config_info(map_config_path);
                     if(map_config_info.exists() && map_config_info.isFile())
@@ -512,7 +551,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
 
                     //for get map info
                     map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_meta.ini";
-                    qDebug()<< map_config_path;
+//                    qDebug()<< map_config_path;
 
                     QFileInfo map_config_info(map_config_path);
                     if(map_config_info.exists() && map_config_info.isFile())
@@ -584,7 +623,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                     if (params["data_type"].toString() == "map_image_png")
                     {
                         //for get map name
-                        map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                        map_config_path = QDir::homePath()+"/maps/"+map_id+"/changed_map.png";
                         //                         }
                     }
                     else if(params["data_type"].toString() == "map_package")
@@ -788,7 +827,7 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 double shelve_height = params["shelve_height"].toDouble();
                 double shelve_degree = params["shelve_degree"].toDouble();
                 qDebug()<<_id;
-                std::cout<<item_id<<item_count<<shelve_height<<shelve_degree<<std::endl;
+//                std::cout<<item_id<<item_count<<shelve_height<<shelve_degree<<std::endl;
 
                 json_out["msg_type"] = "cmd_result";
                 json_out["result"] = "success";
@@ -836,13 +875,23 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                 }
 
                 QJsonDocument doc_json(json_out);
+//                QString str_json(doc_json.toJson(QJsonDocument::Indented));
                 QString str_json(doc_json.toJson(QJsonDocument::Indented));
+
+                std::string rainbow_cmd(str_json.toStdString());
+                IPC::WEB_commend RB_CMD;
+                memcpy((uint8_t*)RB_CMD.json_cmd, rainbow_cmd.data(), 1000);
+                RB_CMD.json_cmd_size = rainbow_cmd.size();
+//                std::cout<<RB_CMD.json_cmd_size<<std::endl;
 
                 emit msgSendSignal(str_json); //for debuging
                 pClient->sendTextMessage(str_json);
 
 
             }
+
+
+
         }
     }
 }

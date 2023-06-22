@@ -238,8 +238,8 @@ public:
     {
         uint32_t tick = 0;
         bool check = 0;
-        //success_check = 0 -> success
-        //success_check = 1 -> fail
+        //success_check = 1 -> success
+        //success_check = 0 -> fail
 
         SUCCESS_CHECK()
         {
@@ -247,10 +247,49 @@ public:
         }
         SUCCESS_CHECK(const SUCCESS_CHECK& p)
         {
-         tick = p.tick;
-         check = p.check;
+            tick = p.tick;
+            check = p.check;
         }
     };
+
+    struct WEB_commend
+    {
+        uint32_t tick = 0;
+        uint8_t json_cmd[1000] = {0,};
+        uint32_t json_cmd_size = 0;
+        uint8_t json_uuid[30]= {0,};
+        uint32_t json_uuid_size = 0;
+
+        WEB_commend()
+        {
+
+        }
+        WEB_commend(const WEB_commend& p)
+        {
+            tick = p.tick;
+            memcpy(json_cmd, p.json_cmd, 1000);
+            json_cmd_size = p.json_cmd_size;
+            memcpy(json_uuid, p.json_uuid, 30);
+            json_uuid_size = p.json_uuid_size;
+        }
+    };
+
+
+//    struct webonFLAG
+//    {
+//        uint32_t tick = 0;
+//        bool flag = 0;
+
+//        webonFLAG()
+//        {
+
+//        }
+//        webonFLAG(const webonFLAG& p)
+//        {
+//            tick = p.tick;
+//            flag = p.flag;
+//        }
+//    };
 
 public:
     explicit IPC(QObject *parent = nullptr);
@@ -266,11 +305,16 @@ public:
     QSharedMemory shm_cam0;
     QSharedMemory shm_cam1;
 
+    //for check websocket on
+    QSharedMemory shm_websocketON;
+
     QSharedMemory shm_move;
     QSharedMemory shm_mobile_pose;
     QSharedMemory shm_mobile_status;
     QSharedMemory shm_move_success_check;
 
+    QSharedMemory shm_yujin_json;
+    QSharedMemory shm_rainbow_json;
 
     CMD get_cmd();
     STATUS get_status();
@@ -293,6 +337,10 @@ public:
     void set_cam1(IPC::IMG val);
     void set_move_where(IPC::POSE val);
     void set_mobile_status(IPC::ROBOT_COMMAND val);
+
+    void set_websocketON(IPC::SUCCESS_CHECK val);// 통합 프로그램에 플래그 전달하기 위함.
+    void set_Yujin_CMD(IPC::WEB_commend val);// 유진로봇 명령 통합 ui에 전달하기 위함.
+    void set_Rainbow_CMD(IPC::WEB_commend val);// 내가 보낸 메시지 통합 ui에전달하기 위함.
 
 
 signals:

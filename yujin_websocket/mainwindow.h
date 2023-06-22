@@ -18,7 +18,7 @@ public:
     ~MainWindow();
 
 //     ipc
-//    IPC ipc;
+    IPC ipc;
 //    QSharedMemory *ipc;
 
 //    uint32_t last_status_tick = 0;
@@ -34,6 +34,8 @@ public slots:
     void showUI_send_msg(QString message);
 
     void check_robot_connected(bool connected);
+
+    void connectedIntegratedUI();
 
 //    void timerLoop();
 
