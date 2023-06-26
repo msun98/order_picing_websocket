@@ -679,8 +679,8 @@ void websocket::onTextMessageReceived(QString message) //comand msg
                         {
                             //for get map name
 
-                            qDebug()<<"map_id : "<<map_id;
-                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/map_edited.png";
+                            qDebug()<<"map_id : "<<map_id;+"/changed_map.png";
+                            map_config_path = QDir::homePath()+"/maps/"+map_id+"/changed_map.png";;
                             qDebug()<<"map_config_path :"<<map_config_path;
                             fileName = map_id;
                             json_data["map_id"] = map_id;
